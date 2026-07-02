@@ -17,6 +17,11 @@ with your preferred tech stack through an interactive survey.
 
 It generates a complete project structure with all configurations,
 components, and dependencies pre-configured.`),
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if cmd.Name() != "version" && cmd.Name() != "update" {
+			CheckForUpdate()
+		}
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		style.Banner("VoinzNext - CLI", "Interactive Next.js Starter Generator")
 
