@@ -1,0 +1,113 @@
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        include:
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            ext: .exe
+          - os: darwin
+            arch: amd64
+            runner: macos-13
+            ext: ""
+          - os: darwin
+            arch: arm64
+            runner: macos-latest
+            ext: ""
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            ext: ""
+          - os: linux
+            arch: arm64
+            runner: ubuntu-24-arm
+            ext: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          check-latest: true
+
+      - name: Build binary
+        run: |
+          GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build \
+            -ldflags "-X github.com/VoinzzZ/VoinzNext/internal/cli.Version=${{ github.ref_name }} -X github.com/VoinzzZ/VoinzNext/internal/cli.GitCommit=${{ github.sha }}" \
+            -o "voinznext-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}" \
+            ./cmd/voinznext/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: voinznext-${{ matrix.os }}-${{ matrix.arch }}
+          path: voinznext-${{ matrix.os }}-${{ matrix.arch }}${{ matrix.ext }}
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: List artifacts
+        run: ls -R
+
+      - name: Generate checksums
+        run: |
+          cd voinznext-windows-amd64 && sha256sum voinznext-windows-amd64.exe >> ../checksums.txt && cd ..
+          cd voinznext-darwin-amd64 && sha256sum voinznext-darwin-amd64 >> ../checksums.txt && cd ..
+          cd voinznext-darwin-arm64 && sha256sum voinznext-darwin-arm64 >> ../checksums.txt && cd ..
+          cd voinznext-linux-amd64 && sha256sum voinznext-linux-amd64 >> ../checksums.txt && cd ..
+          cd voinznext-linux-arm64 && sha256sum voinznext-linux-arm64 >> ../checksums.txt && cd ..
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: VoinzNext ${{ github.ref_name }}
+          body: |
+            ## VoinzNext ${{ github.ref_name }}
+
+            ### Installation
+
+            **Windows (PowerShell):**
+            ```powershell
+            powershell -c "irm https://raw.githubusercontent.com/VoinzzZ/VoinzNext/main/scripts/install.ps1 | iex"
+            ```
+
+            **macOS / Linux:**
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/VoinzzZ/VoinzNext/main/scripts/install.sh | sh
+            ```
+
+            ### Assets
+            - `voinznext-windows-amd64.exe` — Windows 64-bit
+            - `voinznext-darwin-amd64` — macOS Intel
+            - `voinznext-darwin-arm64` — macOS Apple Silicon
+            - `voinznext-linux-amd64` — Linux 64-bit
+            - `voinznext-linux-arm64` — Linux ARM64
+          files: |
+            voinznext-windows-amd64/voinznext-windows-amd64.exe
+            voinznext-darwin-amd64/voinznext-darwin-amd64
+            voinznext-darwin-arm64/voinznext-darwin-arm64
+            voinznext-linux-amd64/voinznext-linux-amd64
+            voinznext-linux-arm64/voinznext-linux-arm64
+            checksums.txt
