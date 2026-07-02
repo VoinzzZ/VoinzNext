@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"time"
 
 	"github.com/VoinzzZ/VoinzNext/internal/style"
 	"github.com/spf13/cobra"
@@ -32,6 +33,40 @@ func getPlatformArch() (string, string) {
 		"linux":   "linux",
 	}
 	return osMap[runtime.GOOS], archMap[runtime.GOARCH]
+}
+
+func getDownloadUrl(tag string) string {
+	osName, arch := getPlatformArch()
+	if osName == "" || arch == "" {
+		return ""
+	}
+	filename := fmt.Sprintf("voinznext-%s-%s", osName, arch)
+	if runtime.GOOS == "windows" {
+		filename += ".exe"
+	}
+	return fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s",
+		repoOwner, repoName, tag, filename)
+}
+
+func downloadBinary(url, dest string) error {
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	out, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	return err
 }
 
 var updateCmd = &cobra.Command{
@@ -63,115 +98,83 @@ Auto-detects installation method:
 		fmt.Printf("  %s Latest version: %s (current: %s)\n", style.SprintCyan("●"), style.Value(latestTag), style.Dimmed(currentTag))
 		fmt.Printf("  %s Downloading update...\n", style.SprintCyan("●"))
 
-		if IsNpmInstall() {
-			return updateViaNpm()
+		downloadUrl := getDownloadUrl(release.TagName)
+		if downloadUrl == "" {
+			fmt.Printf("  %s Unsupported platform: %s/%s\n", style.SprintRed("✘"), runtime.GOOS, runtime.GOARCH)
+			return fmt.Errorf("unsupported platform")
 		}
 
-		if IsGoInstall() {
-			return updateViaGo()
+		exe, err := os.Executable()
+		if err != nil {
+			fmt.Printf("  %s Cannot determine executable path: %v\n", style.SprintRed("✘"), err)
+			return err
 		}
 
-		return updateViaBinary(release.TagName)
+		tmpPath := exe + ".new"
+		if err := downloadBinary(downloadUrl, tmpPath); err != nil {
+			os.Remove(tmpPath)
+			fmt.Printf("  %s Download failed: %v\n", style.SprintRed("✘"), err)
+			return err
+		}
+
+		if runtime.GOOS != "windows" {
+			os.Chmod(tmpPath, 0755)
+		}
+
+		fmt.Printf("  %s Installing update...\n", style.SprintCyan("●"))
+
+		if runtime.GOOS == "windows" {
+			return replaceViaScript(exe, tmpPath)
+		}
+
+		if err := os.Rename(tmpPath, exe); err != nil {
+			os.Remove(tmpPath)
+			fmt.Printf("  %s Failed to install update: %v\n", style.SprintRed("✘"), err)
+			return err
+		}
+
+		fmt.Printf("  %s VoinzNext has been updated to %s!\n", style.SprintGreen("✔"), style.Value(latestTag))
+		fmt.Printf("  %s Run %s to verify\n", style.SprintCyan("●"), style.Value("voinznext version"))
+		return nil
 	},
 }
 
-func updateViaNpm() error {
-	cmd := exec.Command("npm", "install", "-g", "voinznext@latest")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("  %s npm update failed: %v\n", style.SprintRed("✘"), err)
-		fmt.Printf("  %s\n", style.Dimmed(string(output)))
-		return err
-	}
-	fmt.Printf("  %s VoinzNext has been updated!\n", style.SprintGreen("✔"))
-	fmt.Printf("  %s Run %s to verify\n", style.SprintCyan("●"), style.Value("voinznext version"))
-	return nil
-}
+func replaceViaScript(exe, tmpPath string) error {
+	script := fmt.Sprintf(`@echo off
+ping -n 2 127.0.0.1 > nul
+move /Y "%s" "%s" > nul
+if exist "%s" (
+  del "%s"
+  echo Update failed
+) else (
+  echo VoinzNext updated successfully!
+)
+`, tmpPath, exe, exe, tmpPath)
 
-func updateViaGo() error {
-	cmd := exec.Command("go", "install", "github.com/VoinzzZ/VoinzNext/cmd/voinznext@latest")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("  %s Update failed: %v\n", style.SprintRed("✘"), err)
-		fmt.Printf("  %s\n", style.Dimmed(string(output)))
-		return err
-	}
-	fmt.Printf("  %s VoinzNext has been updated!\n", style.SprintGreen("✔"))
-	fmt.Printf("  %s Run %s to verify\n", style.SprintCyan("●"), style.Value("voinznext version"))
-	return nil
-}
-
-func updateViaBinary(tag string) error {
-	osName, arch := getPlatformArch()
-	if osName == "" || arch == "" {
-		fmt.Printf("  %s Unsupported platform: %s/%s\n", style.SprintRed("✘"), runtime.GOOS, runtime.GOARCH)
-		return fmt.Errorf("unsupported platform")
-	}
-
-	filename := fmt.Sprintf("voinznext-%s-%s", osName, arch)
-	if runtime.GOOS == "windows" {
-		filename += ".exe"
-	}
-
-	downloadUrl := fmt.Sprintf("https://github.com/%s/%s/releases/download/%s/%s",
-		repoOwner, repoName, tag, filename)
-
-	exe, err := os.Executable()
-	if err != nil {
-		fmt.Printf("  %s Cannot determine executable path: %v\n", style.SprintRed("✘"), err)
-		return err
-	}
-
-	tmpPath := exe + ".new"
-	resp, err := http.Get(downloadUrl)
-	if err != nil {
-		fmt.Printf("  %s Download failed: %v\n", style.SprintRed("✘"), err)
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		fmt.Printf("  %s Download failed with status %d\n", style.SprintRed("✘"), resp.StatusCode)
-		return fmt.Errorf("download failed with status %d", resp.StatusCode)
-	}
-
-	out, err := os.Create(tmpPath)
-	if err != nil {
-		fmt.Printf("  %s Cannot create temp file: %v\n", style.SprintRed("✘"), err)
-		return err
-	}
-
-	_, err = io.Copy(out, resp.Body)
-	out.Close()
-	if err != nil {
+	scriptPath := exe + ".bat"
+	if err := os.WriteFile(scriptPath, []byte(script), 0644); err != nil {
 		os.Remove(tmpPath)
-		fmt.Printf("  %s Download failed: %v\n", style.SprintRed("✘"), err)
+		fmt.Printf("  %s Cannot create update script: %v\n", style.SprintRed("✘"), err)
 		return err
 	}
 
-	if runtime.GOOS != "windows" {
-		os.Chmod(tmpPath, 0755)
+	cmd := exec.Command(scriptPath)
+	cmd.Stdin = nil
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	if err := cmd.Start(); err != nil {
+		os.Remove(tmpPath)
+		os.Remove(scriptPath)
+		fmt.Printf("  %s Cannot start update script: %v\n", style.SprintRed("✘"), err)
+		return err
 	}
 
-	if err := os.Rename(tmpPath, exe); err != nil {
-		if runtime.GOOS == "windows" {
-			_ = os.Remove(exe)
-			if err := os.Rename(tmpPath, exe); err != nil {
-				os.Remove(tmpPath)
-				fmt.Printf("  %s Failed to replace binary: %v\n", style.SprintRed("✘"), err)
-				fmt.Printf("  %s New binary saved at: %s\n", style.SprintYellow("⚠"), tmpPath)
-				return err
-			}
-		} else {
-			os.Remove(tmpPath)
-			fmt.Printf("  %s Failed to replace binary: %v\n", style.SprintRed("✘"), err)
-			return err
-		}
-	}
+	go func() {
+		time.Sleep(5 * time.Second)
+		os.Remove(scriptPath)
+	}()
 
-	fmt.Printf("  %s VoinzNext has been updated to %s!\n", style.SprintGreen("✔"), style.Value(tag))
-	fmt.Printf("  %s Run %s to verify\n", style.SprintCyan("●"), style.Value("voinznext version"))
+	fmt.Printf("  %s Update will complete in a moment...\n", style.SprintGreen("✔"))
+	fmt.Printf("  %s Run %s after this window closes\n", style.SprintCyan("●"), style.Value("voinznext version"))
 	return nil
 }
-
-
