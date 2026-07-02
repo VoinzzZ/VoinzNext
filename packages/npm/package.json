@@ -1,6 +1,6 @@
 {
   "name": "voinznext",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Interactive CLI tool for scaffolding Next.js projects with your preferred tech stack",
   "keywords": [
     "nextjs",
