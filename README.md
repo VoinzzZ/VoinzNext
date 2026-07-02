@@ -6,6 +6,17 @@ Interactive CLI tool for scaffolding Next.js projects with your preferred tech s
 
 No dependencies required — no Go, no Node, no npm.
 
+### Via npm / npx (recommended)
+
+```bash
+# Run directly without installing
+npx voinznext init
+
+# Or install globally
+npm install -g voinznext
+voinznext init
+```
+
 ### Windows (PowerShell)
 
 ```powershell
