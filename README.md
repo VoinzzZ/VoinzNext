@@ -5,17 +5,17 @@ Interactive CLI tool for scaffolding Next.js projects with your preferred tech s
 ## Installation
 
 ```bash
-go install github.com/VoinzzZ/VoinzNext/cmd/voinznest@latest
+go install github.com/VoinzzZ/VoinzNext/cmd/voinznext@latest
 ```
 
 ## Usage
 
 ```bash
-voinznest init     # Start interactive survey & generate project
-voinznest list     # Show available tech stacks
-voinznest add      # Add feature to existing project (coming soon)
-voinznest update   # Update to latest version
-voinznest version  # Show version info
+voinznext init     # Start interactive survey & generate project
+voinznext list     # Show available tech stacks
+voinznext add      # Add feature to existing project (coming soon)
+voinznext update   # Update to latest version
+voinznext version  # Show version info
 ```
 
 ## Tech Stack Options
@@ -37,6 +37,6 @@ voinznest version  # Show version info
 ```bash
 git clone https://github.com/VoinzzZ/VoinzNext.git
 cd VoinzNext
-go build -o bin/voinznest.exe ./cmd/voinznest/
+go build -o bin/voinznext.exe ./cmd/voinznext/
 go test ./...
 ```

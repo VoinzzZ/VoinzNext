@@ -15,7 +15,7 @@ var updateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  %s Checking for updates...\n", style.SprintCyan("●"))
 
-		updateCmd := exec.Command("go", "install", "github.com/VoinzzZ/VoinzNext/cmd/voinznest@latest")
+		updateCmd := exec.Command("go", "install", "github.com/VoinzzZ/VoinzNext/cmd/voinznext@latest")
 		output, err := updateCmd.CombinedOutput()
 		if err != nil {
 			fmt.Printf("  %s Update failed: %v\n", style.SprintRed("✘"), err)

@@ -10,7 +10,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "voinznest",
+	Use:   "voinznext",
 	Short: style.Dimmed("VoinzNext - Interactive Next.js Starter Generator"),
 	Long: style.Dimmed(`VoinzNext is a CLI tool that helps you scaffold a Next.js project
 with your preferred tech stack through an interactive survey.
@@ -30,7 +30,7 @@ components, and dependencies pre-configured.`),
 		fmt.Printf("    %s  %-12s %s\n", style.SprintCyan("●"), "update", style.Dimmed("Update VoinzNext to latest version"))
 		fmt.Printf("    %s  %-12s %s\n", style.SprintCyan("●"), "version", style.Dimmed("Print version information"))
 		fmt.Println()
-		fmt.Printf("  %s %s\n", style.Dimmed("Try:"), style.Value("voinznest init"))
+		fmt.Printf("  %s %s\n", style.Dimmed("Try:"), style.Value("voinznext init"))
 		fmt.Println()
 	},
 }
@@ -38,7 +38,7 @@ components, and dependencies pre-configured.`),
 func Execute() {
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
 		style.Banner("VoinzNext - Help", "Usage information")
-		fmt.Printf("  %s %s %s\n\n", style.Dimmed("Use"), style.Value("voinznest [command] --help"), style.Dimmed("for command details"))
+		fmt.Printf("  %s %s %s\n\n", style.Dimmed("Use"), style.Value("voinznext [command] --help"), style.Dimmed("for command details"))
 
 		fmt.Printf("  %s\n", style.Label("Commands:"))
 		for _, c := range cmd.Commands() {
@@ -52,7 +52,7 @@ func Execute() {
 		}
 		fmt.Println()
 		fmt.Printf("  %s %s %s\n", style.Dimmed("Flags:"), style.Value("-h, --help"), style.Dimmed("show help"))
-		fmt.Printf("  %s %s %s\n", style.Dimmed("Usage:"), style.Value("voinznest [command] [flags]"), "")
+		fmt.Printf("  %s %s %s\n", style.Dimmed("Usage:"), style.Value("voinznext [command] [flags]"), "")
 		fmt.Println()
 	})
 

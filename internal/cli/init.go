@@ -17,7 +17,7 @@ then generate a complete Next.js project with all configurations,
 components, dependencies, and .env.example files.
 
 Usage:
-  voinznest init
+  voinznext init
 
 The survey will ask about:
   - Project name, router type, language

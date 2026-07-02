@@ -21,10 +21,10 @@ var addCmd = &cobra.Command{
 Supports: prisma, drizzle, nextauth, lucia, clerk, trpc, shadcn, vitest, jest, playwright
 
 Examples:
-  voinznest add prisma     - Add Prisma ORM to existing project
-  voinznest add nextauth   - Add NextAuth.js authentication
-  voinznest add shadcn     - Add shadcn/ui components
-  voinznest add trpc       - Add tRPC API pattern`,
+  voinznext add prisma     - Add Prisma ORM to existing project
+  voinznext add nextauth   - Add NextAuth.js authentication
+  voinznext add shadcn     - Add shadcn/ui components
+  voinznext add trpc       - Add tRPC API pattern`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			fmt.Printf("  %s Please specify a feature to add\n\n", style.SprintYellow("●"))
@@ -56,7 +56,7 @@ Examples:
 		fmt.Printf("  %s Feature %s is coming soon!\n", style.SprintYellow("●"), style.Value(feature))
 		fmt.Printf("  %s For now, run %s to generate a new project with this feature.\n",
 			style.SprintCyan("●"),
-			style.Value("voinznest init"))
+			style.Value("voinznext init"))
 		fmt.Println()
 
 		return nil
