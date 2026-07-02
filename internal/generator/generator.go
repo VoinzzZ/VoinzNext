@@ -179,6 +179,10 @@ func (g *Generator) writeConfigFiles(dir string) error {
 		}
 	}
 
+	if err := writeFile(filepath.Join(dir, ".npmrc"), readTemplateFile(".npmrc")); err != nil {
+		return err
+	}
+
 	return nil
 }
 

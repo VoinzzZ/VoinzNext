@@ -139,10 +139,10 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 	devDeps := map[string]string{}
 
 	if cfg.Language == "typescript" {
-		devDeps["typescript"] = "^5.4.0"
+		devDeps["typescript"] = "^5.6.0"
 		devDeps["@types/react"] = "^18.3.0"
 		devDeps["@types/react-dom"] = "^18.3.0"
-		devDeps["@types/node"] = "^20.0.0"
+		devDeps["@types/node"] = "^22.0.0"
 	}
 
 	switch cfg.CSSFramework {
@@ -168,8 +168,8 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 		devDeps["prisma"] = "^5.14.0"
 		deps["@prisma/client"] = "^5.14.0"
 	case "drizzle":
-		deps["drizzle-orm"] = "^0.31.0"
-		devDeps["drizzle-kit"] = "^0.22.0"
+		deps["drizzle-orm"] = "^0.33.0"
+		devDeps["drizzle-kit"] = "^0.24.0"
 		if cfg.DatabaseORM == "drizzle" && cfg.APIPattern == "trpc" {
 			deps["@planetscale/database"] = "^1.19.0"
 		}
@@ -187,40 +187,40 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 
 	switch cfg.APIPattern {
 	case "trpc":
-		deps["@trpc/server"] = "^10.45.0"
-		deps["@trpc/client"] = "^10.45.0"
-		deps["@trpc/react-query"] = "^10.45.0"
-		deps["@tanstack/react-query"] = "^5.40.0"
-		devDeps["@trpc/next"] = "^10.45.0"
+		deps["@trpc/server"] = "^11.0.0"
+		deps["@trpc/client"] = "^11.0.0"
+		deps["@trpc/react-query"] = "^11.0.0"
+		deps["@tanstack/react-query"] = "^5.60.0"
+		devDeps["@trpc/next"] = "^11.0.0"
 		devDeps["zod"] = "^3.23.0"
 	case "graphql":
-		deps["graphql"] = "^16.8.0"
-		deps["graphql-yoga"] = "^5.3.0"
+		deps["graphql"] = "^16.9.0"
+		deps["graphql-yoga"] = "^5.6.0"
 	}
 
 	switch cfg.Testing {
 	case "vitest":
-		devDeps["vitest"] = "^1.6.0"
-		devDeps["@testing-library/react"] = "^15.0.0"
-		devDeps["@testing-library/jest-dom"] = "^6.4.0"
-		devDeps["jsdom"] = "^24.0.0"
+		devDeps["vitest"] = "^2.0.0"
+		devDeps["@testing-library/react"] = "^16.0.0"
+		devDeps["@testing-library/jest-dom"] = "^6.5.0"
+		devDeps["jsdom"] = "^25.0.0"
 	case "jest":
 		devDeps["jest"] = "^29.7.0"
-		devDeps["@testing-library/react"] = "^15.0.0"
-		devDeps["@testing-library/jest-dom"] = "^6.4.0"
+		devDeps["@testing-library/react"] = "^16.0.0"
+		devDeps["@testing-library/jest-dom"] = "^6.5.0"
 		devDeps["jest-environment-jsdom"] = "^29.7.0"
 		devDeps["@types/jest"] = "^29.5.0"
 		devDeps["ts-jest"] = "^29.1.0"
 		devDeps["babel-jest"] = "^29.7.0"
 	case "playwright":
-		devDeps["@playwright/test"] = "^1.44.0"
+		devDeps["@playwright/test"] = "^1.47.0"
 	}
 
 	if cfg.ESLintPrettier {
 		devDeps["eslint"] = "^8.57.0"
 		devDeps["eslint-config-next"] = "^14.2.0"
-		devDeps["prettier"] = "^3.2.0"
-		devDeps["prettier-plugin-tailwindcss"] = "^0.5.0"
+		devDeps["prettier"] = "^3.3.0"
+		devDeps["prettier-plugin-tailwindcss"] = "^0.6.0"
 		if cfg.Language == "typescript" {
 			devDeps["@typescript-eslint/eslint-plugin"] = "^7.0.0"
 			devDeps["@typescript-eslint/parser"] = "^7.0.0"

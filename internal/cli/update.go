@@ -87,15 +87,14 @@ Auto-detects installation method:
 			return err
 		}
 
-		currentTag := "v" + Version
 		latestTag := release.TagName
 
-		if !compareVersions(currentTag, latestTag) {
+		if !compareVersions(Version, latestTag) {
 			fmt.Printf("  %s You're already on the latest version (%s)\n", style.SprintGreen("✔"), style.Value(latestTag))
 			return nil
 		}
 
-		fmt.Printf("  %s Latest version: %s (current: %s)\n", style.SprintCyan("●"), style.Value(latestTag), style.Dimmed(currentTag))
+		fmt.Printf("  %s Latest version: %s (current: %s)\n", style.SprintCyan("●"), style.Value(latestTag), style.Dimmed(Version))
 		fmt.Printf("  %s Downloading update...\n", style.SprintCyan("●"))
 
 		downloadUrl := getDownloadUrl(release.TagName)
