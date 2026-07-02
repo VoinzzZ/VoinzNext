@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -63,6 +64,13 @@ func TestGenerator_Generate(t *testing.T) {
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			t.Errorf("expected file %s to exist, but it doesn't", f)
 		}
+	}
+
+	pkgPath := filepath.Join(projectDir, "package.json")
+	if data, err := os.ReadFile(pkgPath); err != nil {
+		t.Errorf("failed to read package.json: %v", err)
+	} else if !json.Valid(data) {
+		t.Errorf("package.json is not valid JSON:\n%s", string(data))
 	}
 
 	dirs := []string{

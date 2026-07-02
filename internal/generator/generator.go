@@ -636,15 +636,24 @@ func writeFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
+func escapeJSONString(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	s = strings.ReplaceAll(s, "\n", "\\n")
+	s = strings.ReplaceAll(s, "\r", "\\r")
+	s = strings.ReplaceAll(s, "\t", "\\t")
+	return s
+}
+
 func writeJSON(path string, data interface{}) error {
 	content := "{\n"
 	switch m := data.(type) {
 	case map[string]interface{}:
 		if name, ok := m["name"]; ok {
-			content += fmt.Sprintf("  \"name\": \"%s\",\n", name)
+			content += fmt.Sprintf("  \"name\": \"%s\",\n", escapeJSONString(fmt.Sprintf("%v", name)))
 		}
 		if ver, ok := m["version"]; ok {
-			content += fmt.Sprintf("  \"version\": \"%s\",\n", ver)
+			content += fmt.Sprintf("  \"version\": \"%s\",\n", escapeJSONString(fmt.Sprintf("%v", ver)))
 		}
 		if priv, ok := m["private"]; ok {
 			content += fmt.Sprintf("  \"private\": %v,\n", priv)
@@ -656,7 +665,7 @@ func writeJSON(path string, data interface{}) error {
 				if !first {
 					content += ",\n"
 				}
-				content += fmt.Sprintf("    \"%s\": \"%s\"", k, v)
+				content += fmt.Sprintf("    \"%s\": \"%s\"", k, escapeJSONString(v))
 				first = false
 			}
 			content += "\n  },\n"
@@ -668,7 +677,7 @@ func writeJSON(path string, data interface{}) error {
 				if !first {
 					content += ",\n"
 				}
-				content += fmt.Sprintf("    \"%s\": \"%s\"", k, v)
+				content += fmt.Sprintf("    \"%s\": \"%s\"", k, escapeJSONString(v))
 				first = false
 			}
 			content += "\n  },\n"
@@ -680,7 +689,7 @@ func writeJSON(path string, data interface{}) error {
 				if !first {
 					content += ",\n"
 				}
-				content += fmt.Sprintf("    \"%s\": \"%s\"", k, v)
+				content += fmt.Sprintf("    \"%s\": \"%s\"", k, escapeJSONString(v))
 				first = false
 			}
 			content += "\n  }\n"
