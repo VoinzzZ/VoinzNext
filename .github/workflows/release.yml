@@ -20,20 +20,12 @@ jobs:
             runner: windows-latest
             ext: .exe
           - os: darwin
-            arch: amd64
-            runner: macos-13
-            ext: ""
-          - os: darwin
             arch: arm64
             runner: macos-latest
             ext: ""
           - os: linux
             arch: amd64
             runner: ubuntu-latest
-            ext: ""
-          - os: linux
-            arch: arm64
-            runner: ubuntu-24-arm
             ext: ""
 
     steps:
@@ -75,10 +67,8 @@ jobs:
       - name: Generate checksums
         run: |
           cd voinznext-windows-amd64 && sha256sum voinznext-windows-amd64.exe >> ../checksums.txt && cd ..
-          cd voinznext-darwin-amd64 && sha256sum voinznext-darwin-amd64 >> ../checksums.txt && cd ..
           cd voinznext-darwin-arm64 && sha256sum voinznext-darwin-arm64 >> ../checksums.txt && cd ..
           cd voinznext-linux-amd64 && sha256sum voinznext-linux-amd64 >> ../checksums.txt && cd ..
-          cd voinznext-linux-arm64 && sha256sum voinznext-linux-arm64 >> ../checksums.txt && cd ..
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -101,14 +91,10 @@ jobs:
 
             ### Assets
             - `voinznext-windows-amd64.exe` — Windows 64-bit
-            - `voinznext-darwin-amd64` — macOS Intel
             - `voinznext-darwin-arm64` — macOS Apple Silicon
             - `voinznext-linux-amd64` — Linux 64-bit
-            - `voinznext-linux-arm64` — Linux ARM64
           files: |
             voinznext-windows-amd64/voinznext-windows-amd64.exe
-            voinznext-darwin-amd64/voinznext-darwin-amd64
             voinznext-darwin-arm64/voinznext-darwin-arm64
             voinznext-linux-amd64/voinznext-linux-amd64
-            voinznext-linux-arm64/voinznext-linux-arm64
             checksums.txt
