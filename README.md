@@ -4,9 +4,29 @@ Interactive CLI tool for scaffolding Next.js projects with your preferred tech s
 
 ## Installation
 
+No dependencies required — no Go, no Node, no npm.
+
+### Windows (PowerShell)
+
+```powershell
+powershell -c "irm https://raw.githubusercontent.com/VoinzzZ/VoinzNext/main/scripts/install.ps1 | iex"
+```
+
+### macOS / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/VoinzzZ/VoinzNext/main/scripts/install.sh | sh
+```
+
+### Via Go (alternative)
+
 ```bash
 go install github.com/VoinzzZ/VoinzNext/cmd/voinznext@latest
 ```
+
+### Manual
+
+Download the binary for your platform from the [latest release](https://github.com/VoinzzZ/VoinzNext/releases/latest), extract it, and add it to your PATH.
 
 ## Usage
 
@@ -37,6 +57,6 @@ voinznext version  # Show version info
 ```bash
 git clone https://github.com/VoinzzZ/VoinzNext.git
 cd VoinzNext
-go build -o bin/voinznext.exe ./cmd/voinznext/
+go build -o bin/voinznext ./cmd/voinznext/
 go test ./...
 ```
