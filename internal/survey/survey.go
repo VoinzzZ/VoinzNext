@@ -1,24 +1,19 @@
 package survey
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/VoinzzZ/VoinzNext/internal/config"
 	"github.com/VoinzzZ/VoinzNext/internal/registry"
+	"github.com/VoinzzZ/VoinzNext/internal/style"
 	"github.com/AlecAivazis/survey/v2"
 )
 
 func RunSurvey() (*config.ProjectConfig, error) {
 	cfg := &config.ProjectConfig{}
 
-	fmt.Println()
-	fmt.Println("  ╔══════════════════════════════════════════╗")
-	fmt.Println("  ║        VoinzNext - Project Setup         ║")
-	fmt.Println("  ║  Interactive Next.js Starter Generator   ║")
-	fmt.Println("  ╚══════════════════════════════════════════╝")
-	fmt.Println()
+	style.Banner("VoinzNext - Project Setup", "Interactive Next.js Starter Generator")
 
 	for _, q := range registry.Questions {
 		if err := askQuestion(cfg, q); err != nil {
@@ -34,7 +29,7 @@ func askQuestion(cfg *config.ProjectConfig, q config.Question) error {
 	case "ProjectName":
 		var name string
 		prompt := &survey.Input{
-			Message: q.Message,
+			Message: style.Label(q.Message),
 			Default: q.Default,
 		}
 		if err := survey.AskOne(prompt, &name, survey.WithValidator(survey.Required)); err != nil {
@@ -51,7 +46,7 @@ func askQuestion(cfg *config.ProjectConfig, q config.Question) error {
 			options[i] = o.Name
 		}
 		prompt := &survey.Select{
-			Message: q.Message,
+			Message: style.Label(q.Message),
 			Options: options,
 			Default: getDefaultName(q),
 		}
@@ -75,7 +70,7 @@ func askQuestion(cfg *config.ProjectConfig, q config.Question) error {
 			options[i] = o.Name
 		}
 		prompt := &survey.Select{
-			Message: q.Message,
+			Message: style.Label(q.Message),
 			Options: options,
 			Default: getDefaultName(q),
 		}

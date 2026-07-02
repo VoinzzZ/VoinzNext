@@ -3,8 +3,16 @@ package cli
 import (
 	"fmt"
 
+	"github.com/VoinzzZ/VoinzNext/internal/style"
 	"github.com/spf13/cobra"
 )
+
+var validFeatures = []string{
+	"prisma", "drizzle",
+	"nextauth", "lucia", "clerk",
+	"trpc", "shadcn",
+	"vitest", "jest", "playwright",
+}
 
 var addCmd = &cobra.Command{
 	Use:   "add [feature]",
@@ -19,25 +27,38 @@ Examples:
   voinznest add trpc       - Add tRPC API pattern`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
-			return fmt.Errorf("please specify a feature to add\n\nAvailable features: prisma, drizzle, nextauth, lucia, clerk, trpc, shadcn, vitest, jest, playwright")
+			fmt.Printf("  %s Please specify a feature to add\n\n", style.SprintYellow("●"))
+			fmt.Printf("  %s\n", style.Label("Available features:"))
+			for _, f := range validFeatures {
+				fmt.Printf("    %s %s\n", style.SprintCyan("·"), style.Value(f))
+			}
+			fmt.Println()
+			return nil
 		}
 
 		feature := args[0]
-		fmt.Printf("  Adding %q to project...\n", feature)
-
-		validFeatures := map[string]bool{
-			"prisma": true, "drizzle": true,
-			"nextauth": true, "lucia": true, "clerk": true,
-			"trpc": true, "shadcn": true,
-			"vitest": true, "jest": true, "playwright": true,
+		validMap := make(map[string]bool)
+		for _, f := range validFeatures {
+			validMap[f] = true
 		}
 
-		if !validFeatures[feature] {
-			return fmt.Errorf("unknown feature: %q\n\nAvailable features: prisma, drizzle, nextauth, lucia, clerk, trpc, shadcn, vitest, jest, playwright", feature)
+		if !validMap[feature] {
+			fmt.Printf("  %s Unknown feature %s\n\n", style.SprintRed("✘"), style.Value(feature))
+			fmt.Printf("  %s\n", style.Label("Available features:"))
+			for _, f := range validFeatures {
+				fmt.Printf("    %s %s\n", style.SprintCyan("·"), style.Value(f))
+			}
+			fmt.Println()
+			return nil
 		}
 
-		fmt.Printf("  ✅ Feature %q is not yet implemented (coming soon!)\n", feature)
-		fmt.Println("  For now, re-run `voinznest init` to generate a new project with this feature.")
+		fmt.Printf("  %s Adding %s...\n", style.SprintCyan("●"), style.Value(feature))
+		fmt.Printf("  %s Feature %s is coming soon!\n", style.SprintYellow("●"), style.Value(feature))
+		fmt.Printf("  %s For now, run %s to generate a new project with this feature.\n",
+			style.SprintCyan("●"),
+			style.Value("voinznest init"))
+		fmt.Println()
+
 		return nil
 	},
 }

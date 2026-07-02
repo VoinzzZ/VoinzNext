@@ -6,10 +6,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"text/template"
 
 	"github.com/VoinzzZ/VoinzNext/internal/config"
 	"github.com/VoinzzZ/VoinzNext/internal/registry"
+	"github.com/VoinzzZ/VoinzNext/internal/style"
 	"github.com/VoinzzZ/VoinzNext/internal/templates"
 )
 
@@ -28,30 +28,35 @@ func (g *Generator) Generate() error {
 		return fmt.Errorf("create project directory: %w", err)
 	}
 
+	fmt.Printf("  %s %s\n", style.Label("◆"), fmt.Sprintf("Scaffolding %s...", style.Value(g.cfg.ProjectName)))
+	fmt.Println()
+
 	steps := []struct {
 		name string
 		fn   func(string) error
 	}{
-		{"Creating directory structure", g.scaffoldDirs},
-		{"Writing package.json", g.writePackageJSON},
-		{"Writing config files", g.writeConfigFiles},
-		{"Writing source files", g.writeSourceFiles},
-		{"Writing environment file", g.writeEnvFile},
-		{"Writing README", g.writeReadme},
-		{"Writing Docker files", g.writeDockerFiles},
-		{"Writing database files", g.writeDatabaseFiles},
-		{"Writing auth files", g.writeAuthFiles},
-		{"Writing API files", g.writeAPIFiles},
-		{"Writing test files", g.writeTestFiles},
-		{"Writing component library files", g.writeUIFiles},
-		{"Writing ESLint & Prettier config", g.writeLintFiles},
+		{"Directory structure", g.scaffoldDirs},
+		{"package.json with dependencies", g.writePackageJSON},
+		{"Config files (next, ts, tailwind, postcss)", g.writeConfigFiles},
+		{"Source files (layout, pages, components)", g.writeSourceFiles},
+		{".env.example", g.writeEnvFile},
+		{"README.md", g.writeReadme},
+		{"Dockerfile & docker-compose", g.writeDockerFiles},
+		{"Database schema & client", g.writeDatabaseFiles},
+		{"Auth provider setup", g.writeAuthFiles},
+		{"API layer (tRPC)", g.writeAPIFiles},
+		{"Test framework config", g.writeTestFiles},
+		{"UI component library", g.writeUIFiles},
+		{"ESLint & Prettier config", g.writeLintFiles},
 	}
 
 	for _, step := range steps {
-		fmt.Printf("  • %s...\n", step.name)
+		style.StepRunning(step.name)
 		if err := step.fn(dir); err != nil {
+			style.StepError(step.name, err)
 			return fmt.Errorf("%s: %w", step.name, err)
 		}
+		style.StepDone(step.name)
 	}
 
 	return nil
@@ -94,10 +99,10 @@ func (g *Generator) writePackageJSON(dir string) error {
 	deps := registry.GetDependencies(g.cfg)
 
 	pkg := map[string]interface{}{
-		"name":        g.cfg.ProjectName,
-		"version":     "0.1.0",
-		"private":     true,
-		"scripts":     g.getScripts(),
+		"name":            g.cfg.ProjectName,
+		"version":         "0.1.0",
+		"private":         true,
+		"scripts":         g.getScripts(),
 		"dependencies":    map[string]string{},
 		"devDependencies": map[string]string{},
 	}
@@ -115,10 +120,10 @@ func (g *Generator) writePackageJSON(dir string) error {
 
 func (g *Generator) getScripts() map[string]string {
 	scripts := map[string]string{
-		"dev":      "next dev",
-		"build":    "next build",
-		"start":    "next start",
-		"lint":     "next lint",
+		"dev":   "next dev",
+		"build": "next build",
+		"start": "next start",
+		"lint":  "next lint",
 	}
 
 	if g.cfg.Testing == "vitest" {
@@ -178,8 +183,7 @@ func (g *Generator) writeConfigFiles(dir string) error {
 }
 
 func (g *Generator) renderTailwindConfig() string {
-	content := readTemplateFile("tailwind.config.ts")
-	return content
+	return readTemplateFile("tailwind.config.ts")
 }
 
 func (g *Generator) writeSourceFiles(dir string) error {
@@ -198,24 +202,10 @@ func (g *Generator) writeSourceFiles(dir string) error {
 	}
 
 	if g.cfg.Router == "app" {
-		layoutFile := "layout" + ext
-		pageFile := "page" + ext
-		if g.cfg.Language == "javascript" {
-			pageFile = "page.js"
-		}
-		layoutContent := readTemplateFile(layoutFile)
-		tmpl, err := template.New("layout").Parse(layoutContent)
-		if err != nil {
-			layoutContent = strings.ReplaceAll(layoutContent, "import \"./globals.css\"", "import \"@/styles/globals.css\"")
-			layoutContent = strings.ReplaceAll(layoutContent, "import \"./globals.css\"", "import \"../styles/globals.css\"")
-		}
-		_ = tmpl
-
 		if err := writeFile(filepath.Join(dir, "src", "app", "layout"+ext), defaultLayout(g.cfg)); err != nil {
 			return err
 		}
-
-		pageContent := g.renderPage(pageFile)
+		pageContent := g.renderPage()
 		if err := writeFile(filepath.Join(dir, "src", "app", "page"+ext), pageContent); err != nil {
 			return err
 		}
@@ -238,7 +228,7 @@ func (g *Generator) writeSourceFiles(dir string) error {
 	return nil
 }
 
-func (g *Generator) renderPage(pageFile string) string {
+func (g *Generator) renderPage() string {
 	if g.cfg.Language == "javascript" {
 		return readTemplateFile("page.js")
 	}
@@ -592,12 +582,16 @@ func (g *Generator) PostGenerate() error {
 	dir := g.cfg.ProjectDir
 
 	if g.cfg.DatabaseORM == "prisma" {
+		style.StepRunning("Generating Prisma client")
 		if err := g.runCmd(dir, "npx", "prisma", "generate"); err != nil {
-			fmt.Printf("  ⚠ Warning: prisma generate failed: %v\n", err)
+			style.StepWarn("Prisma generate failed", fmt.Sprintf("%v", err))
+		} else {
+			style.StepDone("Prisma client generated")
 		}
 	}
 
 	if g.cfg.InitGit {
+		style.StepRunning("Initializing git repository")
 		gitDir := filepath.Join(dir, ".gitignore")
 		if err := writeFile(gitDir, templates.GetGitIgnore()); err != nil {
 			return err
@@ -609,7 +603,9 @@ func (g *Generator) PostGenerate() error {
 			return err
 		}
 		if err := g.runCmd(dir, "git", "commit", "-m", "Initial commit: generated by VoinzNext"); err != nil {
-			fmt.Printf("  ⚠ Warning: git commit failed (may need git config): %v\n", err)
+			style.StepWarn("Git commit failed", "may need git config")
+		} else {
+			style.StepDone("Git repository initialized")
 		}
 	}
 

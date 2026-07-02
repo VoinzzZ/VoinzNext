@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 
+	"github.com/VoinzzZ/VoinzNext/internal/style"
 	"github.com/spf13/cobra"
 )
 
@@ -16,8 +17,10 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print VoinzNext version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("VoinzNext v%s\n", Version)
-		fmt.Printf("Git Commit: %s\n", GitCommit)
-		fmt.Printf("Build Time: %s\n", BuildTime)
+		fmt.Println()
+		fmt.Printf("  %s  %s v%s\n", style.SprintCyan("◆"), style.Value("VoinzNext"), Version)
+		fmt.Printf("  %s  %s %s\n", style.Dimmed("●"), style.Dimmed("Commit:"), style.Dimmed(GitCommit))
+		fmt.Printf("  %s  %s %s\n", style.Dimmed("●"), style.Dimmed("Built:"), style.Dimmed(BuildTime))
+		fmt.Println()
 	},
 }

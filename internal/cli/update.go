@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 
+	"github.com/VoinzzZ/VoinzNext/internal/style"
 	"github.com/spf13/cobra"
 )
 
@@ -12,15 +13,17 @@ var updateCmd = &cobra.Command{
 	Short: "Update VoinzNext to the latest version",
 	Long:  "Check for updates and install the latest version of VoinzNext.",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		fmt.Println("  Checking for updates...")
+		fmt.Printf("  %s Checking for updates...\n", style.SprintCyan("●"))
 
 		updateCmd := exec.Command("go", "install", "github.com/VoinzzZ/VoinzNext/cmd/voinznest@latest")
 		output, err := updateCmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("update failed: %w\n%s", err, string(output))
+			fmt.Printf("  %s Update failed: %v\n", style.SprintRed("✘"), err)
+			fmt.Printf("  %s\n\n", style.Dimmed(string(output)))
+			return err
 		}
 
-		fmt.Println("  ✅ VoinzNext has been updated to the latest version!")
+		fmt.Printf("  %s VoinzNext has been updated to the latest version!\n\n", style.SprintGreen("✔"))
 		return nil
 	},
 }
