@@ -1,8 +1,14 @@
 {
   "name": "voinznext",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Interactive CLI tool for scaffolding Next.js projects with your preferred tech stack",
-  "keywords": ["nextjs", "scaffold", "cli", "starter", "generator"],
+  "keywords": [
+    "nextjs",
+    "scaffold",
+    "cli",
+    "starter",
+    "generator"
+  ],
   "homepage": "https://github.com/VoinzzZ/VoinzNext",
   "repository": {
     "type": "git",
@@ -11,7 +17,7 @@
   "license": "MIT",
   "author": "VoinzzZ",
   "bin": {
-    "voinznext": "./cli.js"
+    "voinznext": "cli.js"
   },
   "scripts": {
     "postinstall": "node install.js"
@@ -23,6 +29,13 @@
   "engines": {
     "node": ">=18"
   },
-  "os": ["win32", "darwin", "linux"],
-  "cpu": ["x64", "arm64"]
+  "os": [
+    "win32",
+    "darwin",
+    "linux"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
 }

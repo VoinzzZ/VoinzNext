@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 const { createWriteStream, existsSync, mkdirSync, chmodSync } = require("fs");
-const { get } = require("https");
+const https = require("https");
 const { join } = require("path");
 const { platform, arch } = require("process");
 
@@ -29,20 +29,38 @@ function getBinaryName() {
   return p === "windows" ? `${name}.exe` : name;
 }
 
-function getLatestVersion() {
+function fetchJson(url) {
   return new Promise((resolve, reject) => {
-    const url = `https://api.github.com/repos/${REPO}/releases/latest`;
-    get(url, { headers: { "Accept": "application/vnd.github.v3+json", "User-Agent": "voinznext-installer" } }, (res) => {
+    https.get(url, { headers: { "Accept": "application/vnd.github.v3+json", "User-Agent": "voinznext-installer" } }, (res) => {
       let data = "";
       res.on("data", (chunk) => (data += chunk));
       res.on("end", () => {
-        try {
-          const json = JSON.parse(data);
-          resolve(json.tag_name);
-        } catch {
-          reject(new Error(`Failed to parse latest release response: ${data}`));
-        }
+        try { resolve(JSON.parse(data)); }
+        catch { reject(new Error(`Failed to parse response: ${data}`)); }
       });
+    }).on("error", reject);
+  });
+}
+
+function getLatestVersion() {
+  return fetchJson(`https://api.github.com/repos/${REPO}/releases/latest`).then((json) => json.tag_name);
+}
+
+function download(url, dest) {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { "User-Agent": "voinznext-installer" } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        download(res.headers.location, dest).then(resolve).catch(reject);
+        return;
+      }
+      if (res.statusCode !== 200) {
+        reject(new Error(`Download failed with status ${res.statusCode}`));
+        return;
+      }
+      const file = createWriteStream(dest);
+      res.pipe(file);
+      file.on("finish", () => file.close(resolve));
+      file.on("error", reject);
     }).on("error", reject);
   });
 }
@@ -59,18 +77,7 @@ async function install() {
   const version = await getLatestVersion();
   const downloadUrl = `https://github.com/${REPO}/releases/download/${version}/${binaryName}`;
 
-  await new Promise((resolve, reject) => {
-    get(downloadUrl, { headers: { "User-Agent": "voinznext-installer" } }, (res) => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`Download failed with status ${res.statusCode}`));
-        return;
-      }
-      const file = createWriteStream(targetPath);
-      res.pipe(file);
-      file.on("finish", () => file.close(resolve));
-      file.on("error", reject);
-    }).on("error", reject);
-  });
+  await download(downloadUrl, targetPath);
 
   if (platform !== "win32") chmodSync(targetPath, 0o755);
   console.log(`  ✔ Installed to ${targetPath}`);
