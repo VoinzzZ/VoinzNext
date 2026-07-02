@@ -47,6 +47,7 @@ jobs:
           check-latest: true
 
       - name: Build binary
+        shell: bash
         run: |
           GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }} go build \
             -ldflags "-X github.com/VoinzzZ/VoinzNext/internal/cli.Version=${{ github.ref_name }} -X github.com/VoinzzZ/VoinzNext/internal/cli.GitCommit=${{ github.sha }}" \
