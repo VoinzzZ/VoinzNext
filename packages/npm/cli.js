@@ -2,7 +2,7 @@
 module.exports = { downloadLatest };
 
 const { spawnSync } = require("child_process");
-const { createWriteStream, existsSync, mkdirSync, unlinkSync, readFileSync, writeFileSync, chmodSync, renameSync } = require("fs");
+const { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, renameSync } = require("fs");
 const https = require("https");
 const { join } = require("path");
 const { platform, arch } = require("process");
@@ -91,9 +91,13 @@ async function downloadLatest() {
   if (platform !== "win32") chmodSync(tmpPath, 0o755);
 
   try {
-    if (platform === "win32") unlinkSync(binaryPath);
-    renameSync(tmpPath, binaryPath);
-  } catch {}
+    if (platform === "win32") {
+      renameSync(tmpPath, binaryPath);
+    } else {
+      if (existsSync(binaryPath)) unlinkSync(binaryPath);
+      renameSync(tmpPath, binaryPath);
+    }
+  } catch (e) {}
   writeVersionCache(version);
 }
 
