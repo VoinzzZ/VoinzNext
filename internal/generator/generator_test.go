@@ -245,3 +245,95 @@ func TestGenerator_GenerateMinimal(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerator_JavaScriptMode_NoTypeScriptSyntax(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "js-app")
+
+	cfg := &config.ProjectConfig{
+		ProjectName:    "js-app",
+		ProjectDir:     projectDir,
+		Router:         "app",
+		Language:       "javascript",
+		PackageManager: "npm",
+		CSSFramework:   "tailwind",
+		UILibrary:      "none",
+		DatabaseType:   "none",
+		DatabaseORM:    "none",
+		Auth:           "none",
+		APIPattern:     "none",
+		Testing:        "none",
+		Docker:         false,
+		ESLintPrettier: false,
+		InitGit:        false,
+	}
+
+	g := New(cfg)
+	if err := g.Generate(); err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+
+	// App Router layout.jsx must not contain TypeScript syntax
+	layoutPath := filepath.Join(projectDir, "src", "app", "layout.jsx")
+	layoutData, err := os.ReadFile(layoutPath)
+	if err != nil {
+		t.Fatalf("read layout.jsx: %v", err)
+	}
+	layout := string(layoutData)
+
+	tsForbidden := []string{
+		"import type",
+		": Metadata",
+		"Readonly<",
+		"React.ReactNode",
+		": React.",
+	}
+	for _, ts := range tsForbidden {
+		if strings.Contains(layout, ts) {
+			t.Errorf("layout.jsx contains TypeScript syntax %q", ts)
+		}
+	}
+
+	// Pages Router: test _app.jsx
+	projectDir2 := filepath.Join(tmpDir, "js-pages-app")
+	cfg2 := &config.ProjectConfig{
+		ProjectName:    "js-pages-app",
+		ProjectDir:     projectDir2,
+		Router:         "pages",
+		Language:       "javascript",
+		PackageManager: "npm",
+		CSSFramework:   "tailwind",
+		UILibrary:      "none",
+		DatabaseType:   "none",
+		DatabaseORM:    "none",
+		Auth:           "none",
+		APIPattern:     "none",
+		Testing:        "none",
+		Docker:         false,
+		ESLintPrettier: false,
+		InitGit:        false,
+	}
+
+	g2 := New(cfg2)
+	if err := g2.Generate(); err != nil {
+		t.Fatalf("Generate() pages error: %v", err)
+	}
+
+	appPath := filepath.Join(projectDir2, "src", "pages", "_app.jsx")
+	appData, err := os.ReadFile(appPath)
+	if err != nil {
+		t.Fatalf("read _app.jsx: %v", err)
+	}
+	app := string(appData)
+
+	appTsForbidden := []string{
+		"import type",
+		": AppProps",
+		"AppProps",
+	}
+	for _, ts := range appTsForbidden {
+		if strings.Contains(app, ts) {
+			t.Errorf("_app.jsx contains TypeScript syntax %q", ts)
+		}
+	}
+}
