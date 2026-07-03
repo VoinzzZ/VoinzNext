@@ -1,10 +1,12 @@
 package generator
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/VoinzzZ/VoinzNext/internal/config"
@@ -100,24 +102,29 @@ func (g *Generator) scaffoldDirs(dir string) error {
 func (g *Generator) writePackageJSON(dir string) error {
 	deps := registry.GetDependencies(g.cfg)
 
-	pkg := map[string]interface{}{
-		"name":            g.cfg.ProjectName,
-		"version":         "0.1.0",
-		"private":         true,
-		"scripts":         g.getScripts(),
-		"dependencies":    map[string]string{},
-		"devDependencies": map[string]string{},
-		"pnpm": map[string]interface{}{
-			"onlyBuiltDependencies": []string{"unrs-resolver"},
-		},
-	}
+	depsMap := sortedMap{}
+	devDepsMap := sortedMap{}
 
 	for k, v := range deps {
 		if strings.HasPrefix(k, "dev:") {
-			pkg["devDependencies"].(map[string]string)[k[4:]] = v
+			devDepsMap = append(devDepsMap, sortedMapEntry{Key: k[4:], Value: v})
 		} else {
-			pkg["dependencies"].(map[string]string)[k] = v
+			depsMap = append(depsMap, sortedMapEntry{Key: k, Value: v})
 		}
+	}
+	sort.Sort(depsMap)
+	sort.Sort(devDepsMap)
+
+	pkg := orderedPackageJSON{
+		Name:            g.cfg.ProjectName,
+		Version:         "0.1.0",
+		Private:         true,
+		Scripts:         newSortedMapFromMap(g.getScripts()),
+		Dependencies:    depsMap,
+		DevDependencies: devDepsMap,
+		Pnpm: &pnpmConfig{
+			OnlyBuiltDependencies: []string{"unrs-resolver"},
+		},
 	}
 
 	return writeJSON(filepath.Join(dir, "package.json"), pkg)
@@ -749,65 +756,67 @@ func writeFile(path, content string) error {
 	return os.WriteFile(path, []byte(content), 0644)
 }
 
-func escapeJSONString(s string) string {
-	s = strings.ReplaceAll(s, "\\", "\\\\")
-	s = strings.ReplaceAll(s, "\"", "\\\"")
-	s = strings.ReplaceAll(s, "\n", "\\n")
-	s = strings.ReplaceAll(s, "\r", "\\r")
-	s = strings.ReplaceAll(s, "\t", "\\t")
+// ── Ordered JSON types for deterministic package.json output ──
+
+type sortedMapEntry struct {
+	Key   string
+	Value string
+}
+
+type sortedMap []sortedMapEntry
+
+func (s sortedMap) Len() int           { return len(s) }
+func (s sortedMap) Less(i, j int) bool { return s[i].Key < s[j].Key }
+func (s sortedMap) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+
+func (s sortedMap) MarshalJSON() ([]byte, error) {
+	if len(s) == 0 {
+		return []byte("{}"), nil
+	}
+	var buf strings.Builder
+	buf.WriteByte('{')
+	for i, entry := range s {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		key, _ := json.Marshal(entry.Key)
+		val, _ := json.Marshal(entry.Value)
+		buf.Write(key)
+		buf.WriteByte(':')
+		buf.Write(val)
+	}
+	buf.WriteByte('}')
+	return []byte(buf.String()), nil
+}
+
+func newSortedMapFromMap(m map[string]string) sortedMap {
+	s := make(sortedMap, 0, len(m))
+	for k, v := range m {
+		s = append(s, sortedMapEntry{Key: k, Value: v})
+	}
+	sort.Sort(s)
 	return s
 }
 
+type pnpmConfig struct {
+	OnlyBuiltDependencies []string `json:"onlyBuiltDependencies"`
+}
+
+type orderedPackageJSON struct {
+	Name            string     `json:"name"`
+	Version         string     `json:"version"`
+	Private         bool       `json:"private"`
+	Scripts         sortedMap  `json:"scripts"`
+	Dependencies    sortedMap  `json:"dependencies"`
+	DevDependencies sortedMap  `json:"devDependencies"`
+	Pnpm            *pnpmConfig `json:"pnpm,omitempty"`
+}
+
 func writeJSON(path string, data interface{}) error {
-	content := "{\n"
-	switch m := data.(type) {
-	case map[string]interface{}:
-		if name, ok := m["name"]; ok {
-			content += fmt.Sprintf("  \"name\": \"%s\",\n", escapeJSONString(fmt.Sprintf("%v", name)))
-		}
-		if ver, ok := m["version"]; ok {
-			content += fmt.Sprintf("  \"version\": \"%s\",\n", escapeJSONString(fmt.Sprintf("%v", ver)))
-		}
-		if priv, ok := m["private"]; ok {
-			content += fmt.Sprintf("  \"private\": %v,\n", priv)
-		}
-		if scripts, ok := m["scripts"].(map[string]string); ok {
-			content += "  \"scripts\": {\n"
-			first := true
-			for k, v := range scripts {
-				if !first {
-					content += ",\n"
-				}
-				content += fmt.Sprintf("    \"%s\": \"%s\"", k, escapeJSONString(v))
-				first = false
-			}
-			content += "\n  },\n"
-		}
-		if deps, ok := m["dependencies"].(map[string]string); ok && len(deps) > 0 {
-			content += "  \"dependencies\": {\n"
-			first := true
-			for k, v := range deps {
-				if !first {
-					content += ",\n"
-				}
-				content += fmt.Sprintf("    \"%s\": \"%s\"", k, escapeJSONString(v))
-				first = false
-			}
-			content += "\n  },\n"
-		}
-		if devDeps, ok := m["devDependencies"].(map[string]string); ok && len(devDeps) > 0 {
-			content += "  \"devDependencies\": {\n"
-			first := true
-			for k, v := range devDeps {
-				if !first {
-					content += ",\n"
-				}
-				content += fmt.Sprintf("    \"%s\": \"%s\"", k, escapeJSONString(v))
-				first = false
-			}
-			content += "\n  }\n"
-		}
+	content, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal JSON: %w", err)
 	}
-	content += "}\n"
-	return writeFile(path, content)
+	content = append(content, '\n')
+	return writeFile(path, string(content))
 }

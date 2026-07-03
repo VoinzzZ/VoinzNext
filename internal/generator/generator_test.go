@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/VoinzzZ/VoinzNext/internal/config"
@@ -94,6 +95,95 @@ func TestGenerator_Generate(t *testing.T) {
 			t.Errorf("%s is not a directory", d)
 		}
 	}
+}
+
+func TestGenerator_PackageJSON_Deterministic(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "det-test")
+
+	cfg := &config.ProjectConfig{
+		ProjectName:    "det-test",
+		ProjectDir:     projectDir,
+		Router:         "app",
+		Language:       "typescript",
+		PackageManager: "pnpm",
+		CSSFramework:   "tailwind",
+		UILibrary:      "shadcn",
+		DatabaseType:   "postgresql",
+		DatabaseORM:    "prisma",
+		Auth:           "nextauth",
+		APIPattern:     "trpc",
+		Testing:        "vitest",
+		Docker:         true,
+		ESLintPrettier: true,
+		InitGit:        false,
+	}
+
+	// Generate twice and compare package.json output
+	g := New(cfg)
+	if err := g.Generate(); err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+	first, err := os.ReadFile(filepath.Join(projectDir, "package.json"))
+	if err != nil {
+		t.Fatalf("read package.json: %v", err)
+	}
+
+	// Regenerate
+	cfg.ProjectDir = filepath.Join(tmpDir, "det-test-2")
+	g2 := New(cfg)
+	if err := g2.Generate(); err != nil {
+		t.Fatalf("Generate() 2nd error: %v", err)
+	}
+	second, err := os.ReadFile(filepath.Join(cfg.ProjectDir, "package.json"))
+	if err != nil {
+		t.Fatalf("read package.json 2nd: %v", err)
+	}
+
+	if string(first) != string(second) {
+		t.Errorf("package.json output is non-deterministic:\n--- first ---\n%s\n--- second ---\n%s", first, second)
+	}
+
+	// Verify pnpm field is present
+	var parsed map[string]json.RawMessage
+	if err := json.Unmarshal(first, &parsed); err != nil {
+		t.Fatalf("unmarshal package.json: %v", err)
+	}
+	if _, ok := parsed["pnpm"]; !ok {
+		t.Error("package.json missing 'pnpm' field")
+	}
+
+	// Verify keys in dependencies are sorted
+	var full map[string]interface{}
+	json.Unmarshal(first, &full)
+	content := string(first)
+	if deps, ok := full["dependencies"].(map[string]interface{}); ok && len(deps) > 1 {
+		// Check that keys appear in sorted order in the raw JSON
+		lastIdx := -1
+		for _, key := range sortedKeys(deps) {
+			idx := strings.Index(content, "\""+key+"\"")
+			if idx <= lastIdx {
+				t.Errorf("dependencies keys not sorted: %s appeared before expected position", key)
+			}
+			lastIdx = idx
+		}
+	}
+}
+
+func sortedKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	// already need to sort to verify
+	for i := 0; i < len(keys); i++ {
+		for j := i + 1; j < len(keys); j++ {
+			if keys[i] > keys[j] {
+				keys[i], keys[j] = keys[j], keys[i]
+			}
+		}
+	}
+	return keys
 }
 
 func TestGenerator_GenerateMinimal(t *testing.T) {
