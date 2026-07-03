@@ -1,6 +1,6 @@
 {
   "name": "voinznext",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Interactive CLI tool for scaffolding Next.js projects with your preferred tech stack",
   "keywords": [
     "nextjs",
@@ -20,7 +20,8 @@
     "voinznext": "cli.js"
   },
   "scripts": {
-    "postinstall": "node install.js"
+    "postinstall": "node install.js",
+    "postupdate": "node -e \"require('./cli.js').downloadLatest()\""
   },
   "files": [
     "cli.js",
