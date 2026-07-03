@@ -101,6 +101,9 @@ func (g *Generator) writePackageJSON(dir string) error {
 		"scripts":         g.getScripts(),
 		"dependencies":    map[string]string{},
 		"devDependencies": map[string]string{},
+		"pnpm": map[string]interface{}{
+			"onlyBuiltDependencies": []string{"unrs-resolver"},
+		},
 	}
 
 	for k, v := range deps {
