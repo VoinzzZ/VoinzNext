@@ -31,7 +31,6 @@ components, and dependencies pre-configured.`),
 		fmt.Printf("  %s\n", style.Label("Available commands:"))
 		fmt.Printf("    %s  %-12s %s\n", style.SprintCyan("●"), "init", style.Dimmed("Start interactive survey and generate project"))
 		fmt.Printf("    %s  %-12s %s\n", style.SprintCyan("●"), "list", style.Dimmed("Show available tech stack options"))
-		fmt.Printf("    %s  %-12s %s\n", style.SprintCyan("●"), "add", style.Dimmed("Add a feature to existing project"))
 		fmt.Printf("    %s  %-12s %s\n", style.SprintCyan("●"), "update", style.Dimmed("Update VoinzNext to latest version"))
 		fmt.Printf("    %s  %-12s %s\n", style.SprintCyan("●"), "version", style.Dimmed("Print version information"))
 		fmt.Println()
