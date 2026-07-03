@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"time"
 
 	"github.com/VoinzzZ/VoinzNext/internal/style"
 	"github.com/spf13/cobra"
@@ -139,25 +138,31 @@ Auto-detects installation method:
 }
 
 func replaceViaScript(exe, tmpPath string) error {
+	// The .bat script:
+	// 1. Waits for the current process to release the exe (ping delay)
+	// 2. Moves the new binary over the old one
+	// 3. Checks if the move succeeded (tmpPath should no longer exist)
+	// 4. Deletes itself at the end (standard Windows self-delete pattern)
+	scriptPath := exe + ".update.bat"
 	script := fmt.Sprintf(`@echo off
-ping -n 2 127.0.0.1 > nul
-move /Y "%s" "%s" > nul
+ping -n 3 127.0.0.1 > nul
+move /Y "%s" "%s" > nul 2>&1
 if exist "%s" (
-  del "%s"
-  echo Update failed
+  echo Update failed - could not replace binary.
+  del "%s" > nul 2>&1
 ) else (
   echo VoinzNext updated successfully!
 )
-`, tmpPath, exe, exe, tmpPath)
+(goto) 2>nul & del "%%~f0"
+`, tmpPath, exe, tmpPath, tmpPath)
 
-	scriptPath := exe + ".bat"
 	if err := os.WriteFile(scriptPath, []byte(script), 0644); err != nil {
 		os.Remove(tmpPath)
 		fmt.Printf("  %s Cannot create update script: %v\n", style.SprintRed("✘"), err)
 		return err
 	}
 
-	cmd := exec.Command(scriptPath)
+	cmd := exec.Command("cmd", "/C", scriptPath)
 	cmd.Stdin = nil
 	cmd.Stdout = nil
 	cmd.Stderr = nil
@@ -167,11 +172,6 @@ if exist "%s" (
 		fmt.Printf("  %s Cannot start update script: %v\n", style.SprintRed("✘"), err)
 		return err
 	}
-
-	go func() {
-		time.Sleep(5 * time.Second)
-		os.Remove(scriptPath)
-	}()
 
 	fmt.Printf("  %s Update will complete in a moment...\n", style.SprintGreen("✔"))
 	fmt.Printf("  %s Run %s after this window closes\n", style.SprintCyan("●"), style.Value("voinznext version"))
