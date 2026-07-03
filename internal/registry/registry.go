@@ -144,36 +144,36 @@ var Questions = []config.Question{
 
 func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 	deps := map[string]string{
-		"next": "^14.2.0",
-		"react": "^18.3.0",
-		"react-dom": "^18.3.0",
+		"next": "^15.2.0",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
 	}
 
 	devDeps := map[string]string{}
 
 	if cfg.Language == "typescript" {
-		devDeps["typescript"] = "^5.6.0"
-		devDeps["@types/react"] = "^18.3.0"
-		devDeps["@types/react-dom"] = "^18.3.0"
-		devDeps["@types/node"] = "^22.0.0"
+		devDeps["typescript"] = "^5.7.0"
+		devDeps["@types/react"] = "^19.0.0"
+		devDeps["@types/react-dom"] = "^19.0.0"
+		devDeps["@types/node"] = "^22.10.0"
 	}
 
 	switch cfg.CSSFramework {
 	case "tailwind":
-		devDeps["tailwindcss"] = "^3.4.0"
-		devDeps["postcss"] = "^8.4.0"
+		devDeps["tailwindcss"] = "^4.0.0"
+		devDeps["postcss"] = "^8.5.0"
 		devDeps["autoprefixer"] = "^10.4.0"
 	}
 
 	switch cfg.UILibrary {
 	case "shadcn":
-		devDeps["lucide-react"] = "^0.400.0"
-		devDeps["class-variance-authority"] = "^0.7.0"
-		devDeps["clsx"] = "^2.1.0"
-		devDeps["tailwind-merge"] = "^2.3.0"
+		devDeps["lucide-react"] = "^0.500.0"
+		devDeps["class-variance-authority"] = "^0.7.1"
+		devDeps["clsx"] = "^2.1.1"
+		devDeps["tailwind-merge"] = "^2.6.0"
 		devDeps["tailwindcss-animate"] = "^1.0.7"
 	case "daisyui":
-		devDeps["daisyui"] = "^4.12.0"
+		devDeps["daisyui"] = "^5.0.0"
 	}
 
 	switch cfg.DatabaseORM {
@@ -188,8 +188,8 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 			deps["mysql2"] = "^3.22.0"
 		}
 	case "drizzle":
-		deps["drizzle-orm"] = "^0.44.7"
-		devDeps["drizzle-kit"] = "^0.31.10"
+		deps["drizzle-orm"] = "^0.45.0"
+		devDeps["drizzle-kit"] = "^0.32.0"
 		switch cfg.DatabaseType {
 		case "mysql", "tidb":
 			deps["mysql2"] = "^3.22.0"
@@ -217,7 +217,7 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 
 	switch cfg.Auth {
 	case "nextauth":
-		deps["next-auth"] = "^4.24.0"
+		deps["next-auth"] = "^5.0.0"
 	case "lucia":
 		deps["lucia"] = "^3.2.0"
 		devDeps["@lucia-auth/adapter-prisma"] = "^4.0.0"
@@ -240,7 +240,7 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 
 	switch cfg.Testing {
 	case "vitest":
-		devDeps["vitest"] = "^2.0.0"
+		devDeps["vitest"] = "^3.0.0"
 		devDeps["@testing-library/react"] = "^16.0.0"
 		devDeps["@testing-library/jest-dom"] = "^6.5.0"
 		devDeps["jsdom"] = "^25.0.0"
@@ -257,9 +257,9 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 	}
 
 	if cfg.ESLintPrettier {
-		devDeps["eslint"] = "^8.57.0"
-		devDeps["eslint-config-next"] = "^14.2.0"
-		devDeps["prettier"] = "^3.3.0"
+		devDeps["eslint"] = "^9.0.0"
+		devDeps["eslint-config-next"] = "^15.2.0"
+		devDeps["prettier"] = "^3.5.0"
 		devDeps["prettier-plugin-tailwindcss"] = "^0.6.0"
 		if cfg.Language == "typescript" {
 			devDeps["@typescript-eslint/eslint-plugin"] = "^7.0.0"

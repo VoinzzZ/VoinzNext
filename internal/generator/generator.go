@@ -57,6 +57,7 @@ func (g *Generator) Generate() error {
 		{"Dockerfile & docker-compose", g.writeDockerFiles},
 		{"Database setup", g.writeDatabaseFiles},
 		{fmt.Sprintf("API layer (%s)", g.cfg.APIPattern), g.writeAPIFiles},
+		{"Auth setup", g.writeAuthFiles},
 		{"Test framework config", g.writeTestFiles},
 		{"UI component library", g.writeUIFiles},
 		{"ESLint & Prettier config", g.writeLintFiles},
@@ -206,6 +207,18 @@ func (g *Generator) writeConfigFiles(dir string) error {
 }
 
 func (g *Generator) renderTailwindConfig() string {
+	if g.cfg.Language == "javascript" {
+		return `/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}`
+	}
 	return readTemplateFile("tailwind.config.ts")
 }
 
@@ -364,6 +377,16 @@ func (g *Generator) writeEnvFile(dir string) error {
 
 	if g.cfg.APIPattern == "trpc" {
 		content += "\n# tRPC\nNEXT_PUBLIC_TRPC_API_URL=http://localhost:3000/api/trpc\n"
+	}
+
+	if g.cfg.Auth == "nextauth" {
+		content += "\n# NextAuth.js\nAUTH_SECRET=your-secret-key\n"
+		content += "AUTH_URL=http://localhost:3000\n"
+	} else if g.cfg.Auth == "clerk" {
+		content += "\n# Clerk\nNEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your-publishable-key\n"
+		content += "CLERK_SECRET_KEY=your-secret-key\n"
+	} else if g.cfg.Auth == "lucia" {
+		content += "\n# Lucia Auth\nAUTH_SECRET=your-secret-key\n"
 	}
 
 	if g.cfg.Docker {
@@ -581,21 +604,38 @@ export default conn;
 }
 
 func (g *Generator) writeAPIFiles(dir string) error {
-	if g.cfg.APIPattern == "trpc" {
-		serverDir := filepath.Join(dir, "src", "server")
-		if err := writeFile(filepath.Join(serverDir, "trpc.ts"), readTemplateFile("trpc-server.ts")); err != nil {
+	switch g.cfg.APIPattern {
+	case "trpc":
+		if err := g.writeTRPCFiles(dir); err != nil {
 			return err
 		}
-
-		apiDir := filepath.Join(dir, "src", "app", "api", "trpc")
-		if g.cfg.Router == "pages" {
-			apiDir = filepath.Join(dir, "src", "pages", "api", "trpc")
-		}
-		if err := os.MkdirAll(apiDir, 0755); err != nil {
+	case "rest":
+		if err := g.writeRESTFiles(dir); err != nil {
 			return err
 		}
+	case "graphql":
+		if err := g.writeGraphQLFiles(dir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-		routeContent := `import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+func (g *Generator) writeTRPCFiles(dir string) error {
+	serverDir := filepath.Join(dir, "src", "server")
+	if err := writeFile(filepath.Join(serverDir, "trpc.ts"), readTemplateFile("trpc-server.ts")); err != nil {
+		return err
+	}
+
+	apiDir := filepath.Join(dir, "src", "app", "api", "trpc")
+	if g.cfg.Router == "pages" {
+		apiDir = filepath.Join(dir, "src", "pages", "api", "trpc")
+	}
+	if err := os.MkdirAll(apiDir, 0755); err != nil {
+		return err
+	}
+
+	routeContent := `import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "@/server/trpc";
 
 const handler = (req: Request) =>
@@ -608,13 +648,191 @@ const handler = (req: Request) =>
 
 export { handler as GET, handler as POST };
 `
-		if err := writeFile(filepath.Join(apiDir, "[...trpc]", "route.ts"), routeContent); err != nil {
-			return err
-		}
+	return writeFile(filepath.Join(apiDir, "[...trpc]", "route.ts"), routeContent)
+}
+
+func (g *Generator) writeRESTFiles(dir string) error {
+	apiDir := filepath.Join(dir, "src", "app", "api", "hello")
+	if g.cfg.Router == "pages" {
+		apiDir = filepath.Join(dir, "src", "pages", "api")
+	}
+	if err := os.MkdirAll(apiDir, 0755); err != nil {
+		return err
 	}
 
+	if g.cfg.Router == "app" {
+		content := `import { NextResponse } from "next/server";
+
+export async function GET() {
+  return NextResponse.json({ message: "Hello from VoinzNext!" });
+}
+
+export async function POST(req: Request) {
+  const body = await req.json();
+  return NextResponse.json({ received: body });
+}
+`
+		return writeFile(filepath.Join(apiDir, "route.ts"), content)
+	}
+
+	content := `import type { NextApiRequest, NextApiResponse } from "next";
+
+type Data = {
+  message: string;
+};
+
+export default function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<Data>,
+) {
+  res.status(200).json({ message: "Hello from VoinzNext!" });
+}
+`
+	return writeFile(filepath.Join(apiDir, "hello.ts"), content)
+}
+
+func (g *Generator) writeGraphQLFiles(dir string) error {
+	serverDir := filepath.Join(dir, "src", "server")
+	if err := os.MkdirAll(serverDir, 0755); err != nil {
+		return err
+	}
+
+	schemaContent := "import { createSchema } from \"graphql-yoga\";\nconst typeDefs = `\n  type Query {\n    hello: String!\n  }\n`;\nconst resolvers = {\n  Query: {\n    hello: () => \"Hello from VoinzNext!\",\n  },\n};\nexport const schema = createSchema({ typeDefs, resolvers });\n"
+	if err := writeFile(filepath.Join(serverDir, "schema.ts"), schemaContent); err != nil {
+		return err
+	}
+
+	routeDir := filepath.Join(dir, "src", "app", "api", "graphql")
+	if g.cfg.Router == "pages" {
+		routeDir = filepath.Join(dir, "src", "pages", "api")
+	}
+	if err := os.MkdirAll(routeDir, 0755); err != nil {
+		return err
+	}
+
+	if g.cfg.Router == "app" {
+		routeContent := `import { createYoga } from "graphql-yoga";
+import { schema } from "@/server/schema";
+
+const { handleRequest } = createYoga({ schema });
+
+export { handleRequest as GET, handleRequest as POST };
+`
+		return writeFile(filepath.Join(routeDir, "route.ts"), routeContent)
+	}
+
+	routeContent := `import { createYoga } from "graphql-yoga";
+import type { NextApiRequest, NextApiResponse } from "next";
+import { schema } from "@/server/schema";
+
+export default createYoga<{
+  req: NextApiRequest;
+  res: NextApiResponse;
+}>({
+  schema,
+  graphqlEndpoint: "/api/graphql",
+});
+`
+	return writeFile(filepath.Join(routeDir, "graphql.ts"), routeContent)
+}
+
+// ── Auth boilerplate ──
+
+func (g *Generator) writeAuthFiles(dir string) error {
+	switch g.cfg.Auth {
+	case "nextauth":
+		return g.writeNextAuthFiles(dir)
+	case "clerk":
+		return g.writeClerkFiles(dir)
+	case "lucia":
+		return g.writeLuciaFiles(dir)
+	}
 	return nil
 }
+
+func (g *Generator) writeNextAuthFiles(dir string) error {
+	libContent := `import NextAuth from "next-auth";
+import type { NextAuthConfig } from "next-auth";
+
+export const authConfig: NextAuthConfig = {
+  providers: [],
+  callbacks: {},
+};
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+`
+	if err := writeFile(filepath.Join(dir, "src", "lib", "auth.ts"), libContent); err != nil {
+		return err
+	}
+
+	// App Router: src/app/api/auth/[...nextauth]/route.ts
+	if g.cfg.Router == "app" {
+		routeDir := filepath.Join(dir, "src", "app", "api", "auth", "[...nextauth]")
+		if err := os.MkdirAll(routeDir, 0755); err != nil {
+			return err
+		}
+		routeContent := `import { handlers } from "@/lib/auth";
+
+export const { GET, POST } = handlers;
+`
+		return writeFile(filepath.Join(routeDir, "route.ts"), routeContent)
+	}
+
+	// Pages Router: src/pages/api/auth/[...nextauth].ts
+	routeDir := filepath.Join(dir, "src", "pages", "api", "auth")
+	if err := os.MkdirAll(routeDir, 0755); err != nil {
+		return err
+	}
+	routeContent := `import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth";
+
+export default NextAuth(authConfig);
+`
+	return writeFile(filepath.Join(routeDir, "[...nextauth].ts"), routeContent)
+}
+
+func (g *Generator) writeClerkFiles(dir string) error {
+	// App Router: middleware.ts wrapping
+	content := `import { clerkMiddleware } from "@clerk/nextjs/server";
+
+export default clerkMiddleware();
+
+export const config = {
+  matcher: [
+    // Skip Next.js internals and all static files
+    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/(api|trpc)(.*)",
+  ],
+};
+`
+	// Middleware goes at project root for both router types
+	return writeFile(filepath.Join(dir, "middleware.ts"), content)
+}
+
+func (g *Generator) writeLuciaFiles(dir string) error {
+	libContent := `import { Lucia } from "lucia";
+
+export const lucia = new Lucia();
+`
+	if err := writeFile(filepath.Join(dir, "src", "lib", "auth.ts"), libContent); err != nil {
+		return err
+	}
+
+	// Minimal middleware
+	content := `import { lucia } from "@/lib/auth";
+
+export default async function middleware() {
+  // Add Lucia session validation here
+}
+
+export const config = {
+  matcher: "/((?!_next/static|_next/image|favicon.ico).*)",
+};
+`
+	return writeFile(filepath.Join(dir, "middleware.ts"), content)
+}
+
+// ── Test files ──
 
 func (g *Generator) writeTestFiles(dir string) error {
 	switch g.cfg.Testing {
