@@ -43,7 +43,6 @@ func (g *Generator) Generate() error {
 		{"README.md", g.writeReadme},
 		{"Dockerfile & docker-compose", g.writeDockerFiles},
 		{"Database schema & client", g.writeDatabaseFiles},
-		{"Auth provider setup", g.writeAuthFiles},
 		{"API layer (tRPC)", g.writeAPIFiles},
 		{"Test framework config", g.writeTestFiles},
 		{"UI component library", g.writeUIFiles},
@@ -74,11 +73,8 @@ func (g *Generator) scaffoldDirs(dir string) error {
 	if g.cfg.Testing != "none" {
 		dirs = append(dirs, "src/tests", "src/__tests__")
 	}
-	if g.cfg.DatabaseORM != "none" {
+	if g.cfg.DatabaseType != "none" {
 		dirs = append(dirs, "src/db")
-	}
-	if g.cfg.Auth != "none" {
-		dirs = append(dirs, "src/auth")
 	}
 	if g.cfg.APIPattern != "none" {
 		dirs = append(dirs, "src/server")
@@ -298,8 +294,32 @@ func defaultPage(cfg *config.ProjectConfig) string {
 }
 
 func (g *Generator) writeEnvFile(dir string) error {
-	envContent := readTemplateFile(".env.example")
-	return writeFile(filepath.Join(dir, ".env.example"), envContent)
+	content := "# Next.js\nNEXT_PUBLIC_APP_URL=http://localhost:3000\n\n"
+
+	switch g.cfg.DatabaseType {
+	case "mysql":
+		content += "# Database (MySQL)\nDATABASE_URL=\"mysql://user:password@localhost:3306/" + g.cfg.ProjectName + "\"\n"
+	case "postgresql":
+		content += "# Database (PostgreSQL)\nDATABASE_URL=\"postgresql://user:password@localhost:5432/" + g.cfg.ProjectName + "\"\n"
+	case "mongodb":
+		content += "# Database (MongoDB)\nDATABASE_URL=\"mongodb://user:password@localhost:27017/" + g.cfg.ProjectName + "\"\n"
+	case "supabase":
+		content += "# Database (Supabase)\nDATABASE_URL=\"postgresql://user:password@db.supabase.co:5432/postgres\"\n"
+		content += "NEXT_PUBLIC_SUPABASE_URL=your-project-url\n"
+		content += "NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key\n"
+	case "tidb":
+		content += "# Database (TiDB)\nDATABASE_URL=\"mysql://user:password@host:4000/" + g.cfg.ProjectName + "?sslaccept=strict\"\n"
+	}
+
+	if g.cfg.APIPattern == "trpc" {
+		content += "\n# tRPC\nNEXT_PUBLIC_TRPC_API_URL=http://localhost:3000/api/trpc\n"
+	}
+
+	if g.cfg.Docker {
+		content += "\n# Docker\nPOSTGRES_USER=user\nPOSTGRES_PASSWORD=password\nPOSTGRES_DB=" + g.cfg.ProjectName + "\n"
+	}
+
+	return writeFile(filepath.Join(dir, ".env.example"), content)
 }
 
 func (g *Generator) writeReadme(dir string) error {
@@ -313,6 +333,7 @@ This project was generated with [VoinzNext](https://github.com/VoinzzZ/VoinzNext
 - **CSS:** %s
 - **UI Library:** %s
 - **Database:** %s
+- **ORM:** %s
 - **Auth:** %s
 - **API:** %s
 - **Testing:** %s
@@ -351,6 +372,7 @@ cp .env.example .env
 		g.cfg.Language,
 		g.cfg.CSSFramework,
 		g.cfg.UILibrary,
+		g.cfg.DatabaseType,
 		g.cfg.DatabaseORM,
 		g.cfg.Auth,
 		g.cfg.APIPattern,
@@ -372,7 +394,7 @@ func (g *Generator) writeDockerFiles(dir string) error {
 		return err
 	}
 
-	if g.cfg.DatabaseORM != "none" || g.cfg.Auth != "none" {
+	if g.cfg.DatabaseType != "none" || g.cfg.Auth != "none" {
 		content := readTemplateFile("docker-compose.yml")
 		content = strings.ReplaceAll(content, "${PROJECT_NAME}", g.cfg.ProjectName)
 		if err := writeFile(filepath.Join(dir, "docker-compose.yml"), content); err != nil {
@@ -384,27 +406,56 @@ func (g *Generator) writeDockerFiles(dir string) error {
 }
 
 func (g *Generator) writeDatabaseFiles(dir string) error {
+	if g.cfg.DatabaseType == "none" {
+		return nil
+	}
+
+	ext := ".ts"
+	if g.cfg.Language == "javascript" {
+		ext = ".js"
+	}
+
 	switch g.cfg.DatabaseORM {
 	case "prisma":
 		prismaDir := filepath.Join(dir, "prisma")
 		if err := os.MkdirAll(prismaDir, 0755); err != nil {
 			return err
 		}
-		if err := writeFile(filepath.Join(prismaDir, "schema.prisma"), readTemplateFile("schema.prisma")); err != nil {
+		schema := g.renderPrismaSchema()
+		if err := writeFile(filepath.Join(prismaDir, "schema.prisma"), schema); err != nil {
 			return err
 		}
-		if err := writeFile(filepath.Join(dir, "src", "db", "index.ts"), readTemplateFile("db-prisma.ts")); err != nil {
-			return err
+		if g.cfg.DatabaseType == "tidb" {
+			if err := writeFile(filepath.Join(dir, "src", "db", "index"+ext), readTemplateFile("db-prisma-tidb.ts")); err != nil {
+				return err
+			}
+		} else {
+			if err := writeFile(filepath.Join(dir, "src", "db", "index"+ext), readTemplateFile("db-prisma.ts")); err != nil {
+				return err
+			}
 		}
 
 	case "drizzle":
 		if err := writeFile(filepath.Join(dir, "drizzle.config.ts"), readTemplateFile("drizzle.config.ts")); err != nil {
 			return err
 		}
-		if err := writeFile(filepath.Join(dir, "src", "db", "index.ts"), readTemplateFile("db-drizzle.ts")); err != nil {
+		switch g.cfg.DatabaseType {
+		case "mysql", "tidb":
+			if err := writeFile(filepath.Join(dir, "src", "db", "index"+ext), readTemplateFile("db-drizzle-mysql.ts")); err != nil {
+				return err
+			}
+		default:
+			if err := writeFile(filepath.Join(dir, "src", "db", "index"+ext), readTemplateFile("db-drizzle.ts")); err != nil {
+				return err
+			}
+		}
+		if err := writeFile(filepath.Join(dir, "src", "db", "schema"+ext), readTemplateFile("schema-drizzle.ts")); err != nil {
 			return err
 		}
-		if err := writeFile(filepath.Join(dir, "src", "db", "schema.ts"), readTemplateFile("schema-drizzle.ts")); err != nil {
+
+	default:
+		dbContent := g.renderRawDriver(ext)
+		if err := writeFile(filepath.Join(dir, "src", "db", "index"+ext), dbContent); err != nil {
 			return err
 		}
 	}
@@ -412,26 +463,70 @@ func (g *Generator) writeDatabaseFiles(dir string) error {
 	return nil
 }
 
-func (g *Generator) writeAuthFiles(dir string) error {
-	if g.cfg.Auth == "nextauth" {
-		authDir := filepath.Join(dir, "src", "auth")
-		if err := writeFile(filepath.Join(authDir, "index.ts"), readTemplateFile("auth-nextauth.ts")); err != nil {
-			return err
-		}
+func (g *Generator) renderPrismaSchema() string {
+	provider := "postgresql"
+	switch g.cfg.DatabaseType {
+	case "mysql", "tidb":
+		provider = "mysql"
+	case "mongodb":
+		provider = "mongodb"
 	}
+	return fmt.Sprintf(`generator client {
+  provider = "prisma-client-js"
+}
 
-	if g.cfg.Auth == "clerk" {
-		content := `import { ClerkProvider } from "@clerk/nextjs";
+datasource db {
+  provider = "%s"
+  url      = env("DATABASE_URL")
+}
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
-  return <ClerkProvider>{children}</ClerkProvider>;
-}`
-		if err := writeFile(filepath.Join(dir, "src", "auth", "provider.tsx"), content); err != nil {
-			return err
-		}
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+`, provider)
+}
+
+func (g *Generator) renderRawDriver(ext string) string {
+	switch g.cfg.DatabaseType {
+	case "mysql":
+		return `import mysql from "mysql2/promise";
+
+const pool = mysql.createPool(process.env.DATABASE_URL!);
+export default pool;
+`
+	case "postgresql":
+		return `import { Pool } from "pg";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export default pool;
+`
+	case "mongodb":
+		return `import mongoose from "mongoose";
+
+export async function connectDB() {
+  if (mongoose.connection.readyState >= 1) return;
+  return mongoose.connect(process.env.DATABASE_URL!);
+}
+`
+	case "supabase":
+		return `import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+export const supabase = createClient(supabaseUrl, supabaseKey);
+`
+	case "tidb":
+		return `import { connect } from "@tidbcloud/serverless";
+
+const conn = connect({ url: process.env.DATABASE_URL! });
+export default conn;
+`
 	}
-
-	return nil
+	return ""
 }
 
 func (g *Generator) writeAPIFiles(dir string) error {

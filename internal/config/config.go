@@ -7,6 +7,7 @@ type ProjectConfig struct {
 	PackageManager  string
 	CSSFramework    string
 	UILibrary       string
+	DatabaseType    string
 	DatabaseORM     string
 	Auth            string
 	APIPattern      string

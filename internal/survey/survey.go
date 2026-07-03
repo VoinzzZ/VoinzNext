@@ -63,6 +63,33 @@ func askQuestion(cfg *config.ProjectConfig, q config.Question) error {
 			cfg.InitGit = boolVal
 		}
 
+	case "DatabaseORM":
+		if cfg.DatabaseType == "none" {
+			cfg.DatabaseORM = "none"
+			return nil
+		}
+		var filtered []config.Option
+		for _, o := range q.Options {
+			if cfg.DatabaseType == "mongodb" && o.ID == "drizzle" {
+				continue
+			}
+			filtered = append(filtered, o)
+		}
+		options := make([]string, len(filtered))
+		for i, o := range filtered {
+			options[i] = o.Name
+		}
+		var val string
+		prompt := &survey.Select{
+			Message: style.Label(q.Message),
+			Options: options,
+			Default: getDefaultName(config.Question{Options: filtered, Default: q.Default}),
+		}
+		if err := survey.AskOne(prompt, &val); err != nil {
+			return err
+		}
+		setConfigValue(cfg, q.Key, val, filtered)
+
 	default:
 		var val string
 		options := make([]string, len(q.Options))
@@ -115,6 +142,8 @@ func setConfigValue(cfg *config.ProjectConfig, key string, selectedName string, 
 		cfg.CSSFramework = id
 	case "UILibrary":
 		cfg.UILibrary = id
+	case "DatabaseType":
+		cfg.DatabaseType = id
 	case "DatabaseORM":
 		cfg.DatabaseORM = id
 	case "Auth":

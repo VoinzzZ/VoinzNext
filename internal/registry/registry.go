@@ -58,12 +58,25 @@ var Questions = []config.Question{
 		Default: "shadcn",
 	},
 	{
+		Key:     "DatabaseType",
+		Message: "Which database do you want to use?",
+		Options: []config.Option{
+			{ID: "mysql", Name: "MySQL", Description: "Open-source relational database"},
+			{ID: "postgresql", Name: "PostgreSQL", Description: "Advanced open-source relational database"},
+			{ID: "mongodb", Name: "MongoDB", Description: "NoSQL document database"},
+			{ID: "supabase", Name: "Supabase", Description: "Open-source Firebase alternative (PostgreSQL)"},
+			{ID: "tidb", Name: "TiDB", Description: "MySQL-compatible distributed SQL database"},
+			{ID: "none", Name: "None", Description: "No database"},
+		},
+		Default: "none",
+	},
+	{
 		Key:     "DatabaseORM",
 		Message: "Which database ORM?",
 		Options: []config.Option{
 			{ID: "prisma", Name: "Prisma", Description: "Next-gen ORM for Node.js & TypeScript"},
 			{ID: "drizzle", Name: "Drizzle ORM", Description: "Lightweight, performant ORM"},
-			{ID: "none", Name: "None", Description: "No database ORM"},
+			{ID: "none", Name: "None", Description: "No ORM (use raw driver)"},
 		},
 		Default: "prisma",
 	},
@@ -165,14 +178,41 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 
 	switch cfg.DatabaseORM {
 	case "prisma":
-		devDeps["prisma"] = "^5.14.0"
-		deps["@prisma/client"] = "^5.14.0"
-	case "drizzle":
-		deps["drizzle-orm"] = "^0.33.0"
-		devDeps["drizzle-kit"] = "^0.24.0"
-		if cfg.DatabaseORM == "drizzle" && cfg.APIPattern == "trpc" {
-			deps["@planetscale/database"] = "^1.19.0"
+		devDeps["prisma"] = "^7.8.0"
+		deps["@prisma/client"] = "^7.8.0"
+		switch cfg.DatabaseType {
+		case "tidb":
+			deps["@tidbcloud/prisma-adapter"] = "^6.17.0"
+			deps["@tidbcloud/serverless"] = "^0.3.0"
+		case "mysql":
+			deps["mysql2"] = "^3.22.0"
 		}
+	case "drizzle":
+		deps["drizzle-orm"] = "^0.44.7"
+		devDeps["drizzle-kit"] = "^0.31.10"
+		switch cfg.DatabaseType {
+		case "mysql", "tidb":
+			deps["mysql2"] = "^3.22.0"
+		default:
+			deps["pg"] = "^8.22.0"
+		}
+	}
+
+	if cfg.DatabaseType != "none" && cfg.DatabaseORM == "none" {
+		switch cfg.DatabaseType {
+		case "mysql":
+			deps["mysql2"] = "^3.22.0"
+		case "postgresql", "supabase":
+			deps["pg"] = "^8.22.0"
+		case "mongodb":
+			deps["mongoose"] = "^9.7.0"
+		case "tidb":
+			deps["@tidbcloud/serverless"] = "^0.3.0"
+		}
+	}
+
+	if cfg.DatabaseType == "supabase" {
+		deps["@supabase/supabase-js"] = "^2.108.0"
 	}
 
 	switch cfg.Auth {
