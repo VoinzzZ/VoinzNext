@@ -10,8 +10,23 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 )
 
-func RunSurvey() (*config.ProjectConfig, error) {
+func RunSurvey(skipPrompts bool, projectName string) (*config.ProjectConfig, error) {
 	cfg := &config.ProjectConfig{}
+
+	if projectName != "" {
+		cfg.ProjectName = projectName
+	} else {
+		cfg.ProjectName = "my-next-app"
+	}
+
+	dir, _ := os.Getwd()
+	cfg.ProjectDir = dir + string(os.PathSeparator) + cfg.ProjectName
+
+	if skipPrompts {
+		applyDefaults(cfg)
+		style.Banner("VoinzNext - Project Setup", "Using default configuration (--yes)")
+		return cfg, nil
+	}
 
 	style.Banner("VoinzNext - Project Setup", "Interactive Next.js Starter Generator")
 
@@ -22,6 +37,28 @@ func RunSurvey() (*config.ProjectConfig, error) {
 	}
 
 	return cfg, nil
+}
+
+func applyDefaults(cfg *config.ProjectConfig) {
+	for _, q := range registry.Questions {
+		if q.Key == "ProjectName" {
+			continue
+		}
+		setConfigValue(cfg, q.Key, getDefaultName(q), q.Options)
+
+		switch q.Key {
+		case "Docker":
+			cfg.Docker = q.Default == "true"
+		case "ESLintPrettier":
+			cfg.ESLintPrettier = q.Default == "true"
+		case "InitGit":
+			cfg.InitGit = q.Default == "true"
+		}
+	}
+	// DatabaseORM depends on DatabaseType
+	if cfg.DatabaseType == "none" {
+		cfg.DatabaseORM = "none"
+	}
 }
 
 func askQuestion(cfg *config.ProjectConfig, q config.Question) error {

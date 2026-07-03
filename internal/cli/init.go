@@ -13,7 +13,7 @@ import (
 )
 
 var initCmd = &cobra.Command{
-	Use:   "init",
+	Use:   "init [project-name]",
 	Short: "Start interactive survey and generate a new Next.js project",
 	Long: `Run an interactive survey asking about your preferred tech stack,
 then generate a complete Next.js project with all configurations,
@@ -21,6 +21,7 @@ components, dependencies, and .env.example files.
 
 Usage:
   voinznext init
+  voinznext init my-app --yes
 
 The survey will ask about:
   - Project name, router type, language
@@ -29,10 +30,21 @@ The survey will ask about:
   - API pattern, testing framework
   - Docker, ESLint/Prettier, Git setup`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := survey.RunSurvey()
+		skipPrompts, _ := cmd.Flags().GetBool("yes")
+
+		projectName := ""
+		if len(args) > 0 {
+			projectName = args[0]
+		}
+
+		cfg, err := survey.RunSurvey(skipPrompts, projectName)
 		if err != nil {
 			style.ErrorBanner(fmt.Errorf("survey failed: %w", err))
 			return err
+		}
+
+		if skipPrompts {
+			cfg.Overwrite = true
 		}
 
 		gen := generator.New(cfg)
