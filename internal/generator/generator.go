@@ -155,12 +155,14 @@ func (g *Generator) getScripts() map[string]string {
 }
 
 func (g *Generator) writeConfigFiles(dir string) error {
-	ext := ".js"
+	nextCfgExt := ".js"
+	twCfgExt := ".js"
 	if g.cfg.Language == "typescript" {
-		ext = ".ts"
+		nextCfgExt = ".mjs"
+		twCfgExt = ".ts"
 	}
 
-	if err := writeFile(filepath.Join(dir, "next.config"+ext), readTemplateFile("next.config"+ext)); err != nil {
+	if err := writeFile(filepath.Join(dir, "next.config"+nextCfgExt), readTemplateFile("next.config"+nextCfgExt)); err != nil {
 		return err
 	}
 
@@ -171,7 +173,7 @@ func (g *Generator) writeConfigFiles(dir string) error {
 	}
 
 	if g.cfg.CSSFramework == "tailwind" {
-		if err := writeFile(filepath.Join(dir, "tailwind.config"+ext), g.renderTailwindConfig()); err != nil {
+		if err := writeFile(filepath.Join(dir, "tailwind.config"+twCfgExt), g.renderTailwindConfig()); err != nil {
 			return err
 		}
 		if err := writeFile(filepath.Join(dir, "postcss.config.js"), readTemplateFile("postcss.config.js")); err != nil {
@@ -241,6 +243,7 @@ func (g *Generator) renderPage() string {
 
 func defaultLayout(cfg *config.ProjectConfig) string {
 	interLine := `import { Inter } from "next/font/google";`
+	interInit := `const inter = Inter({ subsets: ["latin"] });`
 	interClass := `className={inter.className}`
 	cssImport := `import "@/styles/globals.css";`
 
@@ -250,6 +253,8 @@ func defaultLayout(cfg *config.ProjectConfig) string {
 
 	return fmt.Sprintf(`import type { Metadata } from "next";
 %s
+%s
+
 %s
 
 export const metadata: Metadata = {
@@ -268,7 +273,7 @@ export default function RootLayout({
     </html>
   );
 }
-`, interLine, cssImport, cfg.ProjectName, interClass)
+`, interLine, cssImport, interInit, cfg.ProjectName, interClass)
 }
 
 func defaultApp(cfg *config.ProjectConfig) string {

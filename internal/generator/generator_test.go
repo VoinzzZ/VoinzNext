@@ -37,7 +37,7 @@ func TestGenerator_Generate(t *testing.T) {
 
 	expectedFiles := []string{
 		"package.json",
-		"next.config.ts",
+		"next.config.mjs",
 		"tsconfig.json",
 		"tailwind.config.ts",
 		"postcss.config.js",
