@@ -24,6 +24,12 @@ func New(cfg *config.ProjectConfig) *Generator {
 func (g *Generator) Generate() error {
 	dir := g.cfg.ProjectDir
 
+	if _, err := os.Stat(dir); err == nil {
+		entries, _ := os.ReadDir(dir)
+		if len(entries) > 0 {
+			os.RemoveAll(dir)
+		}
+	}
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("create project directory: %w", err)
 	}
@@ -42,8 +48,8 @@ func (g *Generator) Generate() error {
 		{".env.example", g.writeEnvFile},
 		{"README.md", g.writeReadme},
 		{"Dockerfile & docker-compose", g.writeDockerFiles},
-		{"Database schema & client", g.writeDatabaseFiles},
-		{"API layer (tRPC)", g.writeAPIFiles},
+		{"Database setup", g.writeDatabaseFiles},
+		{fmt.Sprintf("API layer (%s)", g.cfg.APIPattern), g.writeAPIFiles},
 		{"Test framework config", g.writeTestFiles},
 		{"UI component library", g.writeUIFiles},
 		{"ESLint & Prettier config", g.writeLintFiles},
