@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -89,10 +90,35 @@ func fetchLatestRelease() (*githubRelease, error) {
 	return &release, nil
 }
 
+// parseVersion splits a version string like "0.10.3" into [0, 10, 3].
+// Returns [0, 0, 0] if parsing fails.
+func parseVersion(v string) [3]int {
+	v = strings.TrimPrefix(v, "v")
+	parts := strings.SplitN(v, ".", 3)
+	var result [3]int
+	for i := 0; i < len(parts) && i < 3; i++ {
+		n, err := strconv.Atoi(parts[i])
+		if err != nil {
+			return [3]int{}
+		}
+		result[i] = n
+	}
+	return result
+}
+
+// compareVersions returns true if current < latest (i.e. update available).
 func compareVersions(current, latest string) bool {
-	c := strings.TrimPrefix(current, "v")
-	l := strings.TrimPrefix(latest, "v")
-	return c < l
+	c := parseVersion(current)
+	l := parseVersion(latest)
+	for i := 0; i < 3; i++ {
+		if c[i] < l[i] {
+			return true
+		}
+		if c[i] > l[i] {
+			return false
+		}
+	}
+	return false
 }
 
 func CheckForUpdate() {
