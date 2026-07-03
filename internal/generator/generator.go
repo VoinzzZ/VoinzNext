@@ -29,7 +29,12 @@ func (g *Generator) Generate() error {
 	if _, err := os.Stat(dir); err == nil {
 		entries, _ := os.ReadDir(dir)
 		if len(entries) > 0 {
-			os.RemoveAll(dir)
+			if !g.cfg.Overwrite {
+				return config.ErrDirNotEmpty
+			}
+			if err := os.RemoveAll(dir); err != nil {
+				return fmt.Errorf("remove existing directory: %w", err)
+			}
 		}
 	}
 	if err := os.MkdirAll(dir, 0755); err != nil {

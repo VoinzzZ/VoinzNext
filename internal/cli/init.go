@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/VoinzzZ/VoinzNext/internal/config"
 	"github.com/VoinzzZ/VoinzNext/internal/generator"
 	"github.com/VoinzzZ/VoinzNext/internal/style"
 	"github.com/VoinzzZ/VoinzNext/internal/survey"
+	surveylib "github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -34,8 +37,29 @@ The survey will ask about:
 
 		gen := generator.New(cfg)
 		if err := gen.Generate(); err != nil {
-			style.ErrorBanner(fmt.Errorf("generation failed: %w", err))
-			return err
+			if errors.Is(err, config.ErrDirNotEmpty) {
+				var overwrite bool
+				prompt := &surveylib.Confirm{
+					Message: fmt.Sprintf("Directory %q already exists and is not empty. Overwrite?", cfg.ProjectName),
+					Default: false,
+				}
+				if askErr := surveylib.AskOne(prompt, &overwrite); askErr != nil {
+					return askErr
+				}
+				if !overwrite {
+					fmt.Printf("  %s Aborted.\n", style.SprintYellow("●"))
+					return nil
+				}
+				cfg.Overwrite = true
+				gen = generator.New(cfg)
+				if err := gen.Generate(); err != nil {
+					style.ErrorBanner(fmt.Errorf("generation failed: %w", err))
+					return err
+				}
+			} else {
+				style.ErrorBanner(fmt.Errorf("generation failed: %w", err))
+				return err
+			}
 		}
 
 		if err := gen.PostGenerate(); err != nil {

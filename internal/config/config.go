@@ -1,5 +1,12 @@
 package config
 
+import "errors"
+
+// ErrDirNotEmpty is returned when the target project directory already exists
+// and contains files. The caller should prompt the user for confirmation and
+// set Overwrite = true before retrying.
+var ErrDirNotEmpty = errors.New("project directory already exists and is not empty")
+
 type ProjectConfig struct {
 	ProjectName     string
 	Router          string
@@ -15,6 +22,7 @@ type ProjectConfig struct {
 	Docker          bool
 	ESLintPrettier  bool
 	InitGit         bool
+	Overwrite       bool
 	ProjectDir      string
 }
 

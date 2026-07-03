@@ -337,3 +337,90 @@ func TestGenerator_JavaScriptMode_NoTypeScriptSyntax(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerator_ErrDirNotEmpty(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "existing-project")
+
+	// Create dir with a file inside to simulate existing project
+	os.MkdirAll(projectDir, 0755)
+	os.WriteFile(filepath.Join(projectDir, "important.txt"), []byte("do not delete"), 0644)
+
+	cfg := &config.ProjectConfig{
+		ProjectName:    "existing-project",
+		ProjectDir:     projectDir,
+		Router:         "app",
+		Language:       "typescript",
+		PackageManager: "pnpm",
+		CSSFramework:   "none",
+		UILibrary:      "none",
+		DatabaseType:   "none",
+		DatabaseORM:    "none",
+		Auth:           "none",
+		APIPattern:     "none",
+		Testing:        "none",
+		Docker:         false,
+		ESLintPrettier: false,
+		InitGit:        false,
+		Overwrite:      false, // not allowed
+	}
+
+	g := New(cfg)
+	err := g.Generate()
+
+	// Must return ErrDirNotEmpty
+	if err == nil {
+		t.Fatal("expected ErrDirNotEmpty, got nil")
+	}
+	if err != config.ErrDirNotEmpty {
+		t.Fatalf("expected ErrDirNotEmpty, got: %v", err)
+	}
+
+	// Original file must still exist
+	if _, statErr := os.Stat(filepath.Join(projectDir, "important.txt")); os.IsNotExist(statErr) {
+		t.Error("important.txt was deleted without confirmation!")
+	}
+}
+
+func TestGenerator_OverwriteExistingDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	projectDir := filepath.Join(tmpDir, "overwrite-project")
+
+	// Create dir with a file inside
+	os.MkdirAll(projectDir, 0755)
+	os.WriteFile(filepath.Join(projectDir, "old-file.txt"), []byte("old"), 0644)
+
+	cfg := &config.ProjectConfig{
+		ProjectName:    "overwrite-project",
+		ProjectDir:     projectDir,
+		Router:         "app",
+		Language:       "typescript",
+		PackageManager: "pnpm",
+		CSSFramework:   "none",
+		UILibrary:      "none",
+		DatabaseType:   "none",
+		DatabaseORM:    "none",
+		Auth:           "none",
+		APIPattern:     "none",
+		Testing:        "none",
+		Docker:         false,
+		ESLintPrettier: false,
+		InitGit:        false,
+		Overwrite:      true, // explicitly allowed
+	}
+
+	g := New(cfg)
+	if err := g.Generate(); err != nil {
+		t.Fatalf("Generate() with Overwrite=true error: %v", err)
+	}
+
+	// Old file should be gone
+	if _, err := os.Stat(filepath.Join(projectDir, "old-file.txt")); !os.IsNotExist(err) {
+		t.Error("old-file.txt still exists after overwrite")
+	}
+
+	// New project files should exist
+	if _, err := os.Stat(filepath.Join(projectDir, "package.json")); os.IsNotExist(err) {
+		t.Error("package.json not created after overwrite")
+	}
+}
