@@ -98,32 +98,3 @@ jobs:
             voinznext-darwin-arm64/voinznext-darwin-arm64
             voinznext-linux-amd64/voinznext-linux-amd64
             checksums.txt
-
-  publish-npm:
-    name: Publish to npm
-    needs: [release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          registry-url: https://registry.npmjs.org
-
-      - name: Update version from tag
-        shell: bash
-        run: |
-          TAG="${{ github.ref_name }}"
-          VERSION="${TAG#v}"
-          jq ".version = \"$VERSION\"" packages/npm/package.json > packages/npm/package.json.tmp
-          mv packages/npm/package.json.tmp packages/npm/package.json
-
-      - name: Publish to npm
-        shell: bash
-        run: npm publish
-        working-directory: packages/npm
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
