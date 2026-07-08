@@ -144,8 +144,8 @@ var Questions = []config.Question{
 
 func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 	deps := map[string]string{
-		"next": "^15.2.0",
-		"react": "^19.0.0",
+		"next":      "^15.2.0",
+		"react":     "^19.0.0",
 		"react-dom": "^19.0.0",
 	}
 
@@ -161,13 +161,14 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 	switch cfg.CSSFramework {
 	case "tailwind":
 		devDeps["tailwindcss"] = "^4.0.0"
-		devDeps["postcss"] = "^8.5.0"
-		devDeps["autoprefixer"] = "^10.4.0"
+		devDeps["postcss"] = "^8.5.0"       // Peer dependency for tailwindcss
+		devDeps["autoprefixer"] = "^10.4.0" // Peer dependency for tailwindcss
 	}
 
 	switch cfg.UILibrary {
 	case "shadcn":
-		devDeps["lucide-react"] = "^0.500.0"
+		// shadcn/ui peer dependencies
+		devDeps["lucide-react"] = "^0.460.0"
 		devDeps["class-variance-authority"] = "^0.7.1"
 		devDeps["clsx"] = "^2.1.1"
 		devDeps["tailwind-merge"] = "^2.6.0"
@@ -230,7 +231,7 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 		deps["@trpc/server"] = "^11.0.0"
 		deps["@trpc/client"] = "^11.0.0"
 		deps["@trpc/react-query"] = "^11.0.0"
-		deps["@tanstack/react-query"] = "^5.60.0"
+		deps["@tanstack/react-query"] = "^5.60.0" // Peer dependency for @trpc/react-query
 		devDeps["@trpc/next"] = "^11.0.0"
 		devDeps["zod"] = "^3.23.0"
 	case "graphql":

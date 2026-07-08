@@ -24,22 +24,27 @@ func New(cfg *config.ProjectConfig) *Generator {
 }
 
 func (g *Generator) Generate() error {
-	dir := g.cfg.ProjectDir
+	finalDir := g.cfg.ProjectDir
 
-	if _, err := os.Stat(dir); err == nil {
-		entries, _ := os.ReadDir(dir)
-		if len(entries) > 0 {
-			if !g.cfg.Overwrite {
-				return config.ErrDirNotEmpty
-			}
-			if err := os.RemoveAll(dir); err != nil {
-				return fmt.Errorf("remove existing directory: %w", err)
-			}
+	if _, err := os.Stat(finalDir); err == nil {
+		entries, _ := os.ReadDir(finalDir)
+		if len(entries) > 0 && !g.cfg.Overwrite {
+			return config.ErrDirNotEmpty
 		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("check project directory: %w", err)
 	}
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return fmt.Errorf("create project directory: %w", err)
+
+	dir, err := os.MkdirTemp(filepath.Dir(finalDir), filepath.Base(finalDir)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("create temp project directory: %w", err)
 	}
+	success := false
+	defer func() {
+		if !success {
+			_ = os.RemoveAll(dir)
+		}
+	}()
 
 	fmt.Printf("  %s %s\n", style.Label("◆"), fmt.Sprintf("Scaffolding %s...", style.Value(g.cfg.ProjectName)))
 	fmt.Println()
@@ -71,6 +76,14 @@ func (g *Generator) Generate() error {
 		}
 		style.StepDone(step.name)
 	}
+
+	if err := os.RemoveAll(finalDir); err != nil {
+		return fmt.Errorf("remove existing directory: %w", err)
+	}
+	if err := os.Rename(dir, finalDir); err != nil {
+		return fmt.Errorf("finalize project directory: %w", err)
+	}
+	success = true
 
 	return nil
 }
