@@ -54,9 +54,28 @@ function download(url, dest) {
         reject(new Error(`HTTP ${res.statusCode}`));
         return;
       }
+
+      const totalBytes = parseInt(res.headers['content-length'], 10);
+      let downloadedBytes = 0;
+      let lastPercent = -1;
+
+      res.on('data', (chunk) => {
+        downloadedBytes += chunk.length;
+        if (totalBytes) {
+          const percent = Math.floor((downloadedBytes / totalBytes) * 100);
+          if (percent !== lastPercent && percent % 10 === 0) {
+            process.stdout.write(`\r  ● Downloading... ${percent}%`);
+            lastPercent = percent;
+          }
+        }
+      });
+
       const file = createWriteStream(dest);
       res.pipe(file);
-      file.on("finish", () => file.close(resolve));
+      file.on("finish", () => {
+        if (totalBytes) process.stdout.write(`\r  ✔ Download complete\n`);
+        file.close(resolve);
+      });
       file.on("error", reject);
     }).on("error", reject);
   });

@@ -47,6 +47,25 @@ func getDownloadUrl(tag string) string {
 		repoOwner, repoName, tag, filename)
 }
 
+type progressWriter struct {
+	total      int64
+	done       int64
+	lastReport int
+}
+
+func (pw *progressWriter) Write(p []byte) (int, error) {
+	n := len(p)
+	pw.done += int64(n)
+	if pw.total > 0 {
+		percent := int((pw.done * 100) / pw.total)
+		if percent != pw.lastReport && percent%10 == 0 {
+			fmt.Printf("\r  ● Downloading update... %d%%", percent)
+			pw.lastReport = percent
+		}
+	}
+	return n, nil
+}
+
 func downloadBinary(url, dest string) error {
 	resp, err := http.Get(url)
 	if err != nil {
@@ -64,7 +83,16 @@ func downloadBinary(url, dest string) error {
 	}
 	defer out.Close()
 
-	_, err = io.Copy(out, resp.Body)
+	pw := &progressWriter{
+		total: resp.ContentLength,
+	}
+
+	_, err = io.Copy(io.MultiWriter(out, pw), resp.Body)
+	if err == nil {
+		fmt.Printf("\r  ✔ Download complete             \n")
+	} else {
+		fmt.Println()
+	}
 	return err
 }
 

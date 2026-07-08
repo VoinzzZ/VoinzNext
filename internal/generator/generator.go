@@ -402,11 +402,25 @@ func (g *Generator) writeEnvFile(dir string) error {
 		content += "\n# Lucia Auth\nAUTH_SECRET=your-secret-key\n"
 	}
 
-	if g.cfg.Docker {
-		content += "\n# Docker\nPOSTGRES_USER=user\nPOSTGRES_PASSWORD=password\nPOSTGRES_DB=" + g.cfg.ProjectName + "\n"
+	if g.cfg.Docker && g.cfg.DatabaseType != "none" {
+		content += "\n# Docker\n"
+		switch g.cfg.DatabaseType {
+		case "mysql", "tidb":
+			content += "MYSQL_ROOT_PASSWORD=password\n"
+			content += "MYSQL_DATABASE=" + g.cfg.ProjectName + "\n"
+		case "mongodb":
+			content += "MONGO_INITDB_DATABASE=" + g.cfg.ProjectName + "\n"
+		default: // postgresql, supabase
+			content += "POSTGRES_USER=user\n"
+			content += "POSTGRES_PASSWORD=password\n"
+			content += "POSTGRES_DB=" + g.cfg.ProjectName + "\n"
+		}
 	}
 
-	return writeFile(filepath.Join(dir, ".env.example"), content)
+	if err := writeFile(filepath.Join(dir, ".env.example"), content); err != nil {
+		return err
+	}
+	return writeFile(filepath.Join(dir, ".env"), content)
 }
 
 func (g *Generator) writeReadme(dir string) error {
@@ -481,15 +495,71 @@ func (g *Generator) writeDockerFiles(dir string) error {
 		return err
 	}
 
-	if g.cfg.DatabaseType != "none" || g.cfg.Auth != "none" {
-		content := readTemplateFile("docker-compose.yml")
-		content = strings.ReplaceAll(content, "${PROJECT_NAME}", g.cfg.ProjectName)
+	if g.cfg.DatabaseType != "none" {
+		content := g.renderDockerCompose()
 		if err := writeFile(filepath.Join(dir, "docker-compose.yml"), content); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (g *Generator) renderDockerCompose() string {
+	projectName := g.cfg.ProjectName
+
+	switch g.cfg.DatabaseType {
+	case "mysql", "tidb":
+		return fmt.Sprintf(`services:
+  mysql:
+    image: mysql:8.0
+    container_name: %s-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: %s
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
+`, projectName, projectName)
+
+	case "mongodb":
+		return fmt.Sprintf(`services:
+  mongodb:
+    image: mongo:7
+    container_name: %s-mongodb
+    environment:
+      MONGO_INITDB_DATABASE: %s
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  mongodb_data:
+`, projectName, projectName)
+
+	default: // postgresql, supabase
+		return fmt.Sprintf(`services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: %s-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-%s}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+`, projectName, projectName)
+	}
 }
 
 func (g *Generator) writeDatabaseFiles(dir string) error {
