@@ -1,6 +1,7 @@
 package survey
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -14,6 +15,9 @@ func RunSurvey(skipPrompts bool, projectName string) (*config.ProjectConfig, err
 	cfg := &config.ProjectConfig{}
 
 	if projectName != "" {
+		if err := validateProjectName(projectName); err != nil {
+			return nil, fmt.Errorf("invalid project name: %w", err)
+		}
 		cfg.ProjectName = projectName
 	} else {
 		cfg.ProjectName = "my-next-app"
@@ -69,7 +73,7 @@ func askQuestion(cfg *config.ProjectConfig, q config.Question) error {
 			Message: style.Label(q.Message),
 			Default: q.Default,
 		}
-		if err := survey.AskOne(prompt, &name, survey.WithValidator(survey.Required)); err != nil {
+		if err := survey.AskOne(prompt, &name, survey.WithValidator(validateProjectName)); err != nil {
 			return err
 		}
 		cfg.ProjectName = name
@@ -190,4 +194,41 @@ func setConfigValue(cfg *config.ProjectConfig, key string, selectedName string, 
 	case "Testing":
 		cfg.Testing = id
 	}
+}
+
+// validateProjectName checks if a project name is valid for filesystem usage.
+// It rejects empty strings, illegal characters, and Windows reserved names.
+func validateProjectName(val interface{}) error {
+	name, ok := val.(string)
+	if !ok {
+		return fmt.Errorf("project name must be a string")
+	}
+
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("project name cannot be empty")
+	}
+
+	// Check for illegal filesystem characters
+	illegalChars := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|"}
+	for _, char := range illegalChars {
+		if strings.Contains(name, char) {
+			return fmt.Errorf("project name cannot contain: %s", strings.Join(illegalChars, " "))
+		}
+	}
+
+	// Check for Windows reserved names
+	reserved := []string{
+		"CON", "PRN", "AUX", "NUL",
+		"COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+		"LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+	}
+	upper := strings.ToUpper(name)
+	for _, r := range reserved {
+		if upper == r || strings.HasPrefix(upper, r+".") {
+			return fmt.Errorf("'%s' is a reserved name on Windows", name)
+		}
+	}
+
+	return nil
 }

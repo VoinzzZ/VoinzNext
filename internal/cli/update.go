@@ -139,20 +139,28 @@ Auto-detects installation method:
 
 func replaceViaScript(exe, tmpPath string) error {
 	// The .bat script:
-	// 1. Waits for the current process to release the exe (ping delay)
+	// 1. Retries while the current process still locks the exe
 	// 2. Moves the new binary over the old one
-	// 3. Checks if the move succeeded (tmpPath should no longer exist)
+	// 3. Gives up after a bounded wait and deletes the temp binary
 	// 4. Deletes itself at the end (standard Windows self-delete pattern)
 	scriptPath := exe + ".update.bat"
 	script := fmt.Sprintf(`@echo off
-ping -n 3 127.0.0.1 > nul
+set RETRY_COUNT=0
+:retry
+ping -n 2 127.0.0.1 > nul
 move /Y "%s" "%s" > nul 2>&1
-if exist "%s" (
+if not exist "%s" (
+  echo VoinzNext updated successfully!
+  goto cleanup
+)
+set /A RETRY_COUNT+=1
+if %%RETRY_COUNT%% GEQ 10 (
   echo Update failed - could not replace binary.
   del "%s" > nul 2>&1
-) else (
-  echo VoinzNext updated successfully!
+  goto cleanup
 )
+goto retry
+:cleanup
 (goto) 2>nul & del "%%~f0"
 `, tmpPath, exe, tmpPath, tmpPath)
 
