@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	surveylib "github.com/AlecAivazis/survey/v2"
 	"github.com/VoinzzZ/VoinzNext/internal/config"
 	"github.com/VoinzzZ/VoinzNext/internal/generator"
 	"github.com/VoinzzZ/VoinzNext/internal/style"
 	"github.com/VoinzzZ/VoinzNext/internal/survey"
-	surveylib "github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -81,11 +81,15 @@ The survey will ask about:
 
 		style.SuccessBanner(cfg.ProjectName)
 
-		style.NextSteps([][2]string{
+		nextSteps := [][2]string{
 			{"➜", fmt.Sprintf("cd %s", style.Value(cfg.ProjectName))},
 			{"➜", fmt.Sprintf("%s install", style.Value(cfg.PackageManager))},
-			{"➜", fmt.Sprintf("%s run dev", style.Value(cfg.PackageManager))},
-		})
+		}
+		if cfg.DatabaseORM == "prisma" {
+			nextSteps = append(nextSteps, [2]string{"➜", fmt.Sprintf("%s exec prisma generate", style.Value(cfg.PackageManager))})
+		}
+		nextSteps = append(nextSteps, [2]string{"➜", fmt.Sprintf("%s run dev", style.Value(cfg.PackageManager))})
+		style.NextSteps(nextSteps)
 
 		return nil
 	},

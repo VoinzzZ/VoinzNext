@@ -2,7 +2,7 @@
 module.exports = { downloadLatest };
 
 const { spawnSync } = require("child_process");
-const { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, renameSync } = require("fs");
+const { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, renameSync, unlinkSync } = require("fs");
 const https = require("https");
 const { join } = require("path");
 const { platform, arch } = require("process");

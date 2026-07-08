@@ -627,15 +627,15 @@ func (g *Generator) writeTRPCFiles(dir string) error {
 		return err
 	}
 
-	apiDir := filepath.Join(dir, "src", "app", "api", "trpc")
-	if g.cfg.Router == "pages" {
-		apiDir = filepath.Join(dir, "src", "pages", "api", "trpc")
-	}
-	if err := os.MkdirAll(apiDir, 0755); err != nil {
-		return err
-	}
+	// For App Router: /app/api/trpc/[...trpc]/route.ts
+	// For Pages Router: /pages/api/trpc/[...trpc].ts
+	if g.cfg.Router == "app" {
+		catchAllDir := filepath.Join(dir, "src", "app", "api", "trpc", "[...trpc]")
+		if err := os.MkdirAll(catchAllDir, 0755); err != nil {
+			return err
+		}
 
-	routeContent := `import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+		routeContent := `import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { appRouter } from "@/server/trpc";
 
 const handler = (req: Request) =>
@@ -648,7 +648,24 @@ const handler = (req: Request) =>
 
 export { handler as GET, handler as POST };
 `
-	return writeFile(filepath.Join(apiDir, "[...trpc]", "route.ts"), routeContent)
+		return writeFile(filepath.Join(catchAllDir, "route.ts"), routeContent)
+	}
+
+	// Pages Router uses [...trpc].ts file directly in /api/trpc/
+	pagesApiDir := filepath.Join(dir, "src", "pages", "api", "trpc")
+	if err := os.MkdirAll(pagesApiDir, 0755); err != nil {
+		return err
+	}
+
+	pagesContent := `import { createNextApiHandler } from "@trpc/server/adapters/next";
+import { appRouter } from "@/server/trpc";
+
+export default createNextApiHandler({
+  router: appRouter,
+  createContext: () => ({}),
+});
+`
+	return writeFile(filepath.Join(pagesApiDir, "[...trpc].ts"), pagesContent)
 }
 
 func (g *Generator) writeRESTFiles(dir string) error {
@@ -954,15 +971,6 @@ func (g *Generator) writeLintFiles(dir string) error {
 func (g *Generator) PostGenerate() error {
 	dir := g.cfg.ProjectDir
 
-	if g.cfg.DatabaseORM == "prisma" {
-		style.StepRunning("Generating Prisma client")
-		if err := g.runCmd(dir, "npx", "prisma", "generate"); err != nil {
-			style.StepWarn("Prisma generate failed", fmt.Sprintf("%v", err))
-		} else {
-			style.StepDone("Prisma client generated")
-		}
-	}
-
 	if g.cfg.InitGit {
 		style.StepRunning("Initializing git repository")
 		gitDir := filepath.Join(dir, ".gitignore")
@@ -1056,12 +1064,12 @@ type pnpmConfig struct {
 }
 
 type orderedPackageJSON struct {
-	Name            string     `json:"name"`
-	Version         string     `json:"version"`
-	Private         bool       `json:"private"`
-	Scripts         sortedMap  `json:"scripts"`
-	Dependencies    sortedMap  `json:"dependencies"`
-	DevDependencies sortedMap  `json:"devDependencies"`
+	Name            string      `json:"name"`
+	Version         string      `json:"version"`
+	Private         bool        `json:"private"`
+	Scripts         sortedMap   `json:"scripts"`
+	Dependencies    sortedMap   `json:"dependencies"`
+	DevDependencies sortedMap   `json:"devDependencies"`
 	Pnpm            *pnpmConfig `json:"pnpm,omitempty"`
 }
 
