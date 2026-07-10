@@ -144,13 +144,23 @@ func TestGenerator_PackageJSON_Deterministic(t *testing.T) {
 		t.Errorf("package.json output is non-deterministic:\n--- first ---\n%s\n--- second ---\n%s", first, second)
 	}
 
-	// Verify pnpm field is present
-	var parsed map[string]json.RawMessage
-	if err := json.Unmarshal(first, &parsed); err != nil {
-		t.Fatalf("unmarshal package.json: %v", err)
+	// Verify pnpm build-script approvals are written via supported project config files.
+	workspaceConfig, err := os.ReadFile(filepath.Join(cfg.ProjectDir, "pnpm-workspace.yaml"))
+	if err != nil {
+		t.Fatalf("read pnpm-workspace.yaml: %v", err)
 	}
-	if _, ok := parsed["pnpm"]; !ok {
-		t.Error("package.json missing 'pnpm' field")
+	for _, required := range []string{"allowBuilds:", "esbuild: true", "sharp: true", "unrs-resolver: true"} {
+		if !strings.Contains(string(workspaceConfig), required) {
+			t.Errorf("pnpm-workspace.yaml missing %q", required)
+		}
+	}
+
+	npmrc, err := os.ReadFile(filepath.Join(cfg.ProjectDir, ".npmrc"))
+	if err != nil {
+		t.Fatalf("read .npmrc: %v", err)
+	}
+	if !strings.Contains(string(npmrc), "enable-pre-post-scripts=true") {
+		t.Error(".npmrc missing enable-pre-post-scripts=true")
 	}
 
 	// Verify keys in dependencies are sorted
@@ -216,6 +226,7 @@ func TestGenerator_GenerateMinimal(t *testing.T) {
 	expectedFiles := []string{
 		"package.json",
 		"next.config.js",
+		"jsconfig.json",
 		"README.md",
 		"src/styles/globals.css",
 		"src/app/layout.jsx",

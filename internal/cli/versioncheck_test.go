@@ -46,7 +46,7 @@ func TestCompareVersions(t *testing.T) {
 		{"1.0.0", "0.9.9", false},
 
 		// THE BUG: string comparison would get these wrong
-		{"0.9.0", "0.10.0", true},   // "0.9.0" > "0.10.0" as strings!
+		{"0.9.0", "0.10.0", true}, // "0.9.0" > "0.10.0" as strings!
 		{"0.9.9", "0.10.0", true},
 		{"1.9.0", "1.10.0", true},
 		{"0.99.0", "0.100.0", true},

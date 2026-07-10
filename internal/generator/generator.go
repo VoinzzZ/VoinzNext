@@ -141,9 +141,6 @@ func (g *Generator) writePackageJSON(dir string) error {
 		Scripts:         newSortedMapFromMap(g.getScripts()),
 		Dependencies:    depsMap,
 		DevDependencies: devDepsMap,
-		Pnpm: &pnpmConfig{
-			OnlyBuiltDependencies: []string{"unrs-resolver"},
-		},
 	}
 
 	return writeJSON(filepath.Join(dir, "package.json"), pkg)
@@ -201,6 +198,10 @@ func (g *Generator) writeConfigFiles(dir string) error {
 		if err := writeFile(filepath.Join(dir, "tsconfig.json"), readTemplateFile("tsconfig.json")); err != nil {
 			return err
 		}
+	} else {
+		if err := writeFile(filepath.Join(dir, "jsconfig.json"), readTemplateFile("jsconfig.json")); err != nil {
+			return err
+		}
 	}
 
 	if g.cfg.CSSFramework == "tailwind" {
@@ -213,6 +214,10 @@ func (g *Generator) writeConfigFiles(dir string) error {
 	}
 
 	if err := writeFile(filepath.Join(dir, ".npmrc"), readTemplateFile(".npmrc")); err != nil {
+		return err
+	}
+
+	if err := writeFile(filepath.Join(dir, "pnpm-workspace.yaml"), readTemplateFile("pnpm-workspace.yaml")); err != nil {
 		return err
 	}
 
@@ -851,15 +856,12 @@ func (g *Generator) writeAuthFiles(dir string) error {
 }
 
 func (g *Generator) writeNextAuthFiles(dir string) error {
-	libContent := `import NextAuth from "next-auth";
-import type { NextAuthConfig } from "next-auth";
+	libContent := `import type { NextAuthOptions } from "next-auth";
 
-export const authConfig: NextAuthConfig = {
+export const authOptions: NextAuthOptions = {
   providers: [],
   callbacks: {},
 };
-
-export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
 `
 	if err := writeFile(filepath.Join(dir, "src", "lib", "auth.ts"), libContent); err != nil {
 		return err
@@ -871,9 +873,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
 		if err := os.MkdirAll(routeDir, 0755); err != nil {
 			return err
 		}
-		routeContent := `import { handlers } from "@/lib/auth";
+		routeContent := `import NextAuth from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-export const { GET, POST } = handlers;
+const handler = NextAuth(authOptions);
+
+export { handler as GET, handler as POST };
 `
 		return writeFile(filepath.Join(routeDir, "route.ts"), routeContent)
 	}
@@ -884,9 +889,9 @@ export const { GET, POST } = handlers;
 		return err
 	}
 	routeContent := `import NextAuth from "next-auth";
-import { authConfig } from "@/lib/auth";
+import { authOptions } from "@/lib/auth";
 
-export default NextAuth(authConfig);
+export default NextAuth(authOptions);
 `
 	return writeFile(filepath.Join(routeDir, "[...nextauth].ts"), routeContent)
 }
@@ -1142,10 +1147,6 @@ func newSortedMapFromMap(m map[string]string) sortedMap {
 	return s
 }
 
-type pnpmConfig struct {
-	OnlyBuiltDependencies []string `json:"onlyBuiltDependencies"`
-}
-
 type orderedPackageJSON struct {
 	Name            string      `json:"name"`
 	Version         string      `json:"version"`
@@ -1153,7 +1154,6 @@ type orderedPackageJSON struct {
 	Scripts         sortedMap   `json:"scripts"`
 	Dependencies    sortedMap   `json:"dependencies"`
 	DevDependencies sortedMap   `json:"devDependencies"`
-	Pnpm            *pnpmConfig `json:"pnpm,omitempty"`
 }
 
 func writeJSON(path string, data interface{}) error {

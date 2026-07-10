@@ -49,7 +49,7 @@ if ([Environment]::Is64BitOperatingSystem -eq $false) {
 # ── Download binary ──
 $FileName  = "$App-windows-$Arch.exe"
 $DownloadUrl = "https://github.com/$Repo/releases/download/$Version/$FileName"
-$TargetPath   = "$BinDir\$FileName"
+$TargetPath   = "$BinDir\$App.exe"
 $TempFile     = "$env:TEMP\$FileName"
 
 Write-Color $Cyan "● Downloading $App $Version for Windows $Arch..."
@@ -62,13 +62,14 @@ try {
 
 # ── Install ──
 New-Item -ItemType Directory -Path $BinDir -Force | Out-Null
-Move-Item -Path $TempFile -Destination $TargetPath -Force
 
 # Remove old binary if exists
 $OldExe = "$BinDir\$App.exe"
 if (Test-Path $OldExe) {
   Remove-Item $OldExe -Force
 }
+
+Move-Item -Path $TempFile -Destination $TargetPath -Force
 
 Write-Color $Green "✔ Binary installed to: $TargetPath"
 

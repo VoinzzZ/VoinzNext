@@ -22,9 +22,9 @@ const (
 )
 
 type updateCache struct {
-	CheckedAt    time.Time `json:"checked_at"`
-	LatestTag    string    `json:"latest_tag"`
-	LatestURL    string    `json:"latest_url"`
+	CheckedAt time.Time `json:"checked_at"`
+	LatestTag string    `json:"latest_tag"`
+	LatestURL string    `json:"latest_url"`
 }
 
 type githubRelease struct {

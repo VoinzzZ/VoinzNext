@@ -5,10 +5,10 @@ import (
 	"os"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/VoinzzZ/VoinzNext/internal/config"
 	"github.com/VoinzzZ/VoinzNext/internal/registry"
 	"github.com/VoinzzZ/VoinzNext/internal/style"
-	"github.com/AlecAivazis/survey/v2"
 )
 
 func RunSurvey(skipPrompts bool, projectName string) (*config.ProjectConfig, error) {

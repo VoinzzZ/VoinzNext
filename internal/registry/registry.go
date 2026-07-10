@@ -161,6 +161,7 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 	switch cfg.CSSFramework {
 	case "tailwind":
 		devDeps["tailwindcss"] = "^4.0.0"
+		devDeps["@tailwindcss/postcss"] = "^4.0.0"
 		devDeps["postcss"] = "^8.5.0"       // Peer dependency for tailwindcss
 		devDeps["autoprefixer"] = "^10.4.0" // Peer dependency for tailwindcss
 	}
@@ -218,7 +219,7 @@ func GetDependencies(cfg *config.ProjectConfig) map[string]string {
 
 	switch cfg.Auth {
 	case "nextauth":
-		deps["next-auth"] = "^5.0.0"
+		deps["next-auth"] = "^4.24.14"
 	case "lucia":
 		deps["lucia"] = "^3.2.0"
 		devDeps["@lucia-auth/adapter-prisma"] = "^4.0.0"
