@@ -159,6 +159,9 @@ Auto-detects installation method:
 			return err
 		}
 
+		// Refresh the update cache so CheckForUpdate stops showing the old message
+		saveCache(latestTag, release.HTMLURL)
+
 		fmt.Printf("  %s VoinzNext has been updated to %s!\n", style.SprintGreen("✔"), style.Value(latestTag))
 		fmt.Printf("  %s Run %s to verify\n", style.SprintCyan("●"), style.Value("voinznext version"))
 		return nil

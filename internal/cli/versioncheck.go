@@ -150,6 +150,10 @@ func CheckForUpdate() {
 		fmt.Printf("  %s %s\n", style.SprintYellow("⚠"), style.Dimmed(fmt.Sprintf("A new version is available: %s", style.SprintWhite(latestTag))))
 		fmt.Printf("  %s %s\n", style.SprintYellow("⚠"), style.Dimmed("Run \"voinznext update\" to update."))
 		fmt.Println()
+	} else if cached != nil && cached.LatestTag != currentTag {
+		// Current version is newer or equal to cached latest — refresh cache
+		// This handles the case where user updated via npm/go install but cache still shows old version
+		saveCache(currentTag, "")
 	}
 }
 
