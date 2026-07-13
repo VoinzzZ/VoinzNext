@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.2] - 2026-07-14
+
+### Fixed
+
+- **Update Cache Refresh Logic**
+  After a successful update (via `voinznext update`), the local update cache is now refreshed immediately to reflect the new version. Previously, the CLI would still show an outdated "update available" banner until the 24-hour cache TTL expired, even after updating to the latest version.
+
+---
+
 ## [0.5.1] - 2026-07-10
 
 ### Fixed
