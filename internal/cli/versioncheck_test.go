@@ -14,6 +14,7 @@ func TestParseVersion(t *testing.T) {
 		{"0.10.0", [3]int{0, 10, 0}},
 		{"2.0", [3]int{2, 0, 0}},
 		{"v1", [3]int{1, 0, 0}},
+		{"vv0.5.2", [3]int{0, 0, 0}}, // double v prefix is invalid for parseVersion but handled by TrimPrefix in caller
 		{"invalid", [3]int{0, 0, 0}},
 		{"", [3]int{0, 0, 0}},
 	}
@@ -59,6 +60,9 @@ func TestCompareVersions(t *testing.T) {
 		// Mixed prefix
 		{"0.4.2", "v0.5.0", true},
 		{"v0.4.2", "0.5.0", true},
+
+		// Double v prefix resolved by TrimPrefix in caller, but compareVersions directly will fail if passed raw:
+		{"vv0.5.2", "v0.5.2", true}, // because vv0.5.2 parses to 0.0.0, which is < 0.5.2 (this verifies raw behavior, we fixed it in caller)
 	}
 
 	for _, tt := range tests {

@@ -144,7 +144,7 @@ func CheckForUpdate() {
 		return
 	}
 
-	currentTag := "v" + Version
+	currentTag := "v" + strings.TrimPrefix(Version, "v")
 	if compareVersions(currentTag, latestTag) {
 		fmt.Println()
 		fmt.Printf("  %s %s\n", style.SprintYellow("⚠"), style.Dimmed(fmt.Sprintf("A new version is available: %s", style.SprintWhite(latestTag))))

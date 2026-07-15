@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3] - 2026-07-15
+
+### Fixed
+
+- **Version Check False Positive**
+  Fixed a double "v" prefix bug in the version checking logic that caused false "update available" warnings when running release binaries. The CLI would incorrectly parse "vv0.5.2" (from concatenating "v" + "v0.5.2") as version 0.0.0, always showing an update notification even when already on the latest version.
+
+---
+
 ## [0.5.2] - 2026-07-14
 
 ### Fixed
